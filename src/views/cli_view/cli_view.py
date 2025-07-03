@@ -154,6 +154,8 @@ class CommandLineView(ViewStrategy):
                     try:
                         self.controller.export_data(arg)
                         print(">>> Export successful.")
+                    except ValueError as ve:
+                        print(f">>> Export format error: {ve}")
                     except Exception as ex:
                         print(f">>> Error during export: {ex}")
 
@@ -178,10 +180,6 @@ class CommandLineView(ViewStrategy):
 
     # DISPLAY AVAILABLE COMMANDS
     def show_help(self):
-        """
-        Displays the list of available commands in the CLI.
-        """
-    
         Logger.log("start show_help()")
         print(">>> Available commands:\n")
         print("   - help: Show available commands")
@@ -194,4 +192,10 @@ class CommandLineView(ViewStrategy):
         print("       - tkinter")
         print("   - set_degradation_engine_strategy <arg>: Set Degradation Engine Strategy")
         print("       - NoPhysics")
+        print("   - degrade_node <node_id>: Apply degradation to a node")
+        print("   - degrade_edge <edge_id>: Apply degradation to an edge")
+        print("   - undo_degradation: Undo the last degradation operation")
+        print("   - redo_degradation: Redo the last undone degradation")
+        print("   - export_data <data:image:folder>: Export simulation results")
         Logger.log("end show_help()")
+
