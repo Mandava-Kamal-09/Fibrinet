@@ -1,3 +1,3 @@
-LOG FLUSHED: 2025-06-09 10:53:42.977179
-[2025-06-09 10:53:42] [DEBUG] Logger initialized with default file storage at C:\Users\Logan\Documents\GitHub\Webslinger\utils\logger\..\..\utils\logs.txt.
-[2025-06-09 10:53:42] [DEBUG] Logging disabled
+LOG FLUSHED: 2025-06-22 19:35:55.436982
+[2025-06-22 19:35:55] [DEBUG] Logger initialized with default file storage at c:\Users\manda\OneDrive\Documents\GitHub\Fibrinet\utils\logger\..\..\utils\logs.txt.
+[2025-06-22 19:35:55] [DEBUG] Logging disabled
