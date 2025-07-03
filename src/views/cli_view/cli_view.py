@@ -116,40 +116,47 @@ class CommandLineView(ViewStrategy):
                         print(">>> Network must be loaded before node can be degraded")
                 # HANDLE DEGRADE EDGE COMMAND
                 # degrade_edge
-                elif cmd == "set_degradation_engine_strategy" and arg:
-                    Logger.log(f"Setting degradation engine strategy to: {arg}")
-                    print(f">>> Setting degradation engine strategy to: {arg}")
+                # HANDLE DEGRADE EDGE COMMAND
+                elif cmd == "degrade_edge" and arg:
+                    Logger.log(f"Degrading edge: {arg}")
+                    print(f">>> Degrading edge: {arg}")
                     try:
-                        pass
-                    except:
-                        pass
-                # HANDLE REDO DEGRADATION COMMAND
-                # redo_degradation
-                elif cmd == "set_degradation_engine_strategy" and arg:
-                    Logger.log(f"Setting degradation engine strategy to: {arg}")
-                    print(f">>> Setting degradation engine strategy to: {arg}")
-                    try:
-                        pass
-                    except:
-                        pass
+                        self.controller.degrade_edge(arg)
+                    except StateTransitionError:
+                        print(">>> Network must be loaded before edge can be degraded.")
+                    except Exception as ex:
+                        print(f">>> Error while degrading edge: {ex}")
+
                 # HANDLE UNDO DEGRADATION COMMAND
-                # undo_degradation
-                elif cmd == "set_degradation_engine_strategy" and arg:
-                    Logger.log(f"Setting degradation engine strategy to: {arg}")
-                    print(f">>> Setting degradation engine strategy to: {arg}")
+                elif cmd == "undo_degradation":
+                    Logger.log("Undoing last degradation.")
+                    print(">>> Undoing last degradation.")
                     try:
-                        pass
-                    except:
-                        pass
+                        self.controller.undo_degradation()
+                        print(">>> Undo successful.")
+                    except Exception as ex:
+                        print(f">>> Error during undo: {ex}")
+
+                # HANDLE REDO DEGRADATION COMMAND
+                elif cmd == "redo_degradation":
+                    Logger.log("Redoing last undone degradation.")
+                    print(">>> Redoing last undone degradation.")
+                    try:
+                        self.controller.redo_degradation()
+                        print(">>> Redo successful.")
+                    except Exception as ex:
+                        print(f">>> Error during redo: {ex}")
+
                 # HANDLE EXPORT DATA COMMAND
-                # export_data
                 elif cmd == "export_data" and arg:
-                    Logger.log(f"Exporting Data: {arg}")
-                    print(f">>> Exporting Data: {arg}")
+                    Logger.log(f"Exporting Data to: {arg}")
+                    print(f">>> Exporting Data to: {arg}")
                     try:
-                        pass
-                    except:
-                        pass
+                        self.controller.export_data(arg)
+                        print(">>> Export successful.")
+                    except Exception as ex:
+                        print(f">>> Error during export: {ex}")
+
                 # HANDLE CONFIGURE LOG COMMAND
                 elif cmd == "configure_logger" and arg:
                     enabled = True if arg.split()[0].lower() == "enable" else False
