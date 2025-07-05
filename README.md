@@ -1,20 +1,36 @@
-# FibriNet
+"""# FibriNet
  App to model network under tension. 
 
 # Install Dependencies 
+```bash
 pip install -r requirements.txt
+```
 
 # To Make .Exe
+```bash
 pyinstaller FibriNet.spec
+```
 
 # To run in development
+```bash
 python FibriNet.py
+```
 
 # PROJECT DOCs
-https://drive.google.com/drive/folders/1m1AaeAPe9KY9N34YW82rtmFUuHDx3FuP?usp=drive_link
+https://drive.google.com/drive/folders/1m1AaeAPe9KYN34YW82rtmFUuHDx3FuP?usp=drive_link
 
 # Fibrinet CLI
-python cli_main.py
+The FibriNet CLI provides a command-line interface for interacting with the application.
+
+## How to Run the CLI
+1. Open a terminal or command prompt.
+2. Navigate to the `Fibrinet` directory.
+3. Run the following command:
+   ```bash
+   python cli_main.py
+   ```
+
+## Available Commands
 
 | Command                                                     | Description                                         |
 | ----------------------------------------------------------- | --------------------------------------------------- |
@@ -32,3 +48,38 @@ python cli_main.py
 | `analyze-results`                                           | Analyze output metrics from the simulation          |
 | `export <data_format> <image_format> <folder_path>`         | Export results to a specified format (json, csv, excel, png) |
 | `config <params>`                                           | Update simulation parameters either interactively or from a file |
+
+### Command Examples
+
+#### Input Network
+To load a network from an Excel file, use the `input_network` command with the relative or absolute path to your file.
+
+**Example:**
+```bash
+input_network test/input_data/INPUT TESTS/TestNetwork.xlsx
+```
+
+#### Export Network Data
+To export the current network data, use the `export` command. You can specify a data format, an image format, and the output folder. If you don't want to export a certain type, use `none`.
+
+**Syntax:** `export <data_format> <image_format> <folder_path>`
+
+-   `<data_format>`: `excel`, `json`, `csv`, or `none`
+-   `<image_format>`: `png` or `none`
+-   `<folder_path>`: The absolute or relative path to the folder where the files will be saved.
+
+**Example 1: Exporting both data (Excel) and image (PNG)**
+```bash
+export excel png C:/Users/manda/Documents/UCO/Research_Work/Gemini_CLI/Fibrinet/test/output
+```
+
+**Example 2: Exporting only data (CSV)**
+```bash
+export csv none C:/Users/manda/Documents/UCO/Research_Work/Gemini_CLI/Fibrinet/test/output
+```
+
+**Example 3: Exporting only an image (PNG)**
+```bash
+export none png C:/Users/manda/Documents/UCO/Research_Work/Gemini_CLI/Fibrinet/test/output
+```
+""

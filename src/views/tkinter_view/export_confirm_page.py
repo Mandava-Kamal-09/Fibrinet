@@ -113,7 +113,7 @@ class ExportConfirmPage(TkinterView):
         """
         Handles the confirmation of the export location.
         """
-        export_request = f"export_request {self.view.export_request_details.get("data_export_strategy", None)} {self.view.export_request_details.get("image_export_strategy", None)} {self.view.export_request_details.get("folder_selected", None)}"
+        export_request = f"export_request {self.view.export_request_details.get("data_export_strategy", 'none')} {self.view.export_request_details.get("image_export_strategy", 'none')} {self.view.export_request_details.get("folder_selected", 'none')}"
         # Call export method (this is where the export logic goes)
         try:
             Logger.log(f"Exporting data with request: {export_request}")

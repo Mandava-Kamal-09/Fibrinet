@@ -133,11 +133,11 @@ class ExportPage(TkinterView):
 
         data_export_strategy = None
         if network_type == "EXCEL (.xlsx)":
-            data_export_strategy = "excel_data_export_strategy"
+            data_export_strategy = "excel"
 
         image_export_strategy = None
         if photo_format == "PNG (.png)":
-            image_export_strategy = "png_image_export_strategy"
+            image_export_strategy = "png"
         
         # Select folder
         from tkinter import filedialog

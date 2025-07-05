@@ -148,11 +148,13 @@ class CommandLineView(ViewStrategy):
                         print(f">>> Error during redo: {ex}")
 
                 # HANDLE EXPORT DATA COMMAND
-                elif cmd == "export_data" and arg:
-                    Logger.log(f"Exporting Data to: {arg}")
-                    print(f">>> Exporting Data to: {arg}")
+                elif cmd == "export" and arg:
                     try:
-                        self.controller.export_data(arg)
+                        # Construct the full export request string
+                        export_request = f"export_request {arg}"
+                        Logger.log(f"Exporting Data with request: {export_request}")
+                        print(f">>> Exporting Data...")
+                        self.controller.export_data(export_request)
                         print(">>> Export successful.")
                     except ValueError as ve:
                         print(f">>> Export format error: {ve}")

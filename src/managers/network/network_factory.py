@@ -243,10 +243,10 @@ Logger.log("Registering types with factory...")
 NetworkFactory.register_network_type(Network2D)
 
 # NODES
-NetworkFactory.register_node_type(Network2D, Node2D)
 NetworkFactory.register_node_type(Network2D, FixableNode2D)
+NetworkFactory.register_node_type(Network2D, Node2D)
 
 # EDGES
-NetworkFactory.register_edge_type(Network2D, BaseEdge)   
 NetworkFactory.register_edge_type(Network2D, EdgeWithRestLength)
+NetworkFactory.register_edge_type(Network2D, BaseEdge)   
 
