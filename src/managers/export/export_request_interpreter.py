@@ -1,21 +1,25 @@
 from .excel_export_strategy import ExcelExportStrategy
 from .png_export_strategy import PngExportStrategy
+from .json_export_strategy import JsonExportStrategy
+from .csv_export_strategy import CsvExportStrategy
 from utils.logger.logger import Logger
 
 class ExportRequestInterpreter:
     """
-    This class interprets export requests and instantiates the 
+    This class interprets export requests and instantiates the
     appropriate export strategies based on the request.
     """
 
     # VALID DATA EXPORT STRATEGIES
     VALID_DATA_STRATEGIES = {
-        "excel_data_export_strategy": ExcelExportStrategy
+        "excel": ExcelExportStrategy,
+        "json": JsonExportStrategy,
+        "csv": CsvExportStrategy
     }
 
     # VALID IMAGE EXPORT STRATEGIES
     VALID_IMAGE_STRATEGIES = {
-        "png_image_export_strategy": PngExportStrategy
+        "png": PngExportStrategy
     }
 
     def parse_request(self, request_str: str):

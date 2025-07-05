@@ -2,6 +2,7 @@ from src.managers.input.input_manager import InputManager
 from src.managers.view.view_manager import ViewManager
 from src.managers.export.export_manager import ExportManager
 from src.managers.network.network_manager import NetworkManager
+from src.managers.analysis.analysis_manager import AnalysisManager
 from utils.logger.logger import Logger
 from utils.logger.local_file_strategy import LocalFileStrategy
 from src.models.system_state import SystemState
@@ -221,6 +222,47 @@ class SystemController:
             # DEFAULT ONLY ENABLES / DISABLES CURRENT LOGGING STRATEGY
             pass
         Logger.log(f"end configure_Logger(self, **kwargs)")
+
+    def run_simulation(self):
+        """
+        Runs the network simulation.
+        """
+        Logger.log("start run_simulation(self)")
+        if self.system_state.network_loaded:
+            self.network_manager.relax_network()
+            Logger.log("Simulation run successfully.")
+        else:
+            Logger.log("StateTransitionError: Cannot run simulation, network not loaded.", Logger.LogPriority.ERROR)
+            raise StateTransitionError("Cannot run simulation, network not loaded.")
+        Logger.log("end run_simulation(self)")
+
+    def analyze_network(self):
+        """
+        Analyzes the current network state.
+        """
+        Logger.log("start analyze_network(self)")
+        if self.system_state.network_loaded:
+            analysis = self.analysis_manager.analyze_network(self.network_manager.get_network())
+            Logger.log("Analysis complete.")
+            return analysis
+        else:
+            Logger.log("StateTransitionError: Cannot analyze network, network not loaded.", Logger.LogPriority.ERROR)
+            raise StateTransitionError("Cannot analyze network, network not loaded.")
+
+    def update_parameters(self, params):
+        """
+        Updates network parameters.
+        """
+        Logger.log(f"start update_parameters(self, {params})")
+        if self.system_state.network_loaded:
+            # This is a placeholder for the actual implementation
+            # For now, we'll just log the parameters
+            Logger.log(f"Updating parameters with: {params}")
+            print(f"Parameters updated with: {params}")
+        else:
+            Logger.log("StateTransitionError: Cannot update parameters, network not loaded.", Logger.LogPriority.ERROR)
+            raise StateTransitionError("Cannot update parameters, network not loaded.")
+        Logger.log(f"end update_parameters(self, {params})")
 
 
         

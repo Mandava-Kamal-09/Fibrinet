@@ -196,6 +196,9 @@ class CommandLineView(ViewStrategy):
         print("   - degrade_edge <edge_id>: Apply degradation to an edge")
         print("   - undo_degradation: Undo the last degradation operation")
         print("   - redo_degradation: Redo the last undone degradation")
-        print("   - export_data <data:image:folder>: Export simulation results")
+        print("   - run-simulation: Run a fibrin polymerization simulation")
+        print("   - analyze-results: Analyze output metrics from the simulation")
+        print("   - export <data_format> <image_format> <folder_path>: Export results to a specified format (json, csv, excel, png)")
+        print("   - config <params>: Update simulation parameters either interactively or from a file")
         Logger.log("end show_help()")
 

@@ -22,13 +22,13 @@ python cli_main.py
 | `exit` / `quit`                                             | Exit the CLI session                                |
 | `input_network <path>`                                      | Load network data from an `.xlsx` file              |
 | `initiate_view <arg>`                                       | Launch a specific UI view (e.g. `tkinter`)          |
-| `configure_logger enable/disable`                           | Turn logging on or off                              |
+| `configure_logger <enable/disable>`                         | Turn logging on or off                              |
 | `set_degradation_engine_strategy <strategy>`                | Set how the network will degrade (e.g. `NoPhysics`) |
 | `degrade_node <node_id>`                                    | Apply degradation to a node                         |
 | `degrade_edge <edge_id>`                                    | Apply degradation to an edge                        |
 | `undo_degradation`                                          | Undo the last degradation operation                 |
 | `redo_degradation`                                          | Redo the last undone degradation                    |
-| `export_data export_request:<data>:<image>:<output_folder>` | Export simulation results to files                  |
-
-Export Command Format
-export_data export_request:<data_type>:<image_type>:<output_folder>
+| `run-simulation`                                            | Run a fibrin polymerization simulation              |
+| `analyze-results`                                           | Analyze output metrics from the simulation          |
+| `export <data_format> <image_format> <folder_path>`         | Export results to a specified format (json, csv, excel, png) |
+| `config <params>`                                           | Update simulation parameters either interactively or from a file |
