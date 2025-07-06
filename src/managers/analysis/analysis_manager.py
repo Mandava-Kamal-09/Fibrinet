@@ -45,10 +45,5 @@ class AnalysisManager:
             "Number of non-fixed nodes": num_nodes - fixed_nodes
         }
         
-        # Convert to a formatted string for display
-        result_str = "Network Analysis Results:\n"
-        for key, value in analysis_results.items():
-            result_str += f"- {key}: {value}\n"
-            
         Logger.log("Network analysis completed")
-        return result_str
+        return analysis_results
