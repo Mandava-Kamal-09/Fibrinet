@@ -7,6 +7,7 @@ from utils.logger.logger import Logger
 from utils.logger.local_file_strategy import LocalFileStrategy
 from src.models.system_state import SystemState
 from src.models.exceptions import StateTransitionError
+import json
 from src.managers.network.networks.base_network import BaseNetwork
 
 class SystemController:
@@ -175,6 +176,15 @@ class SystemController:
         :raises StateTransitionError: If the state is invalid for export.
         """
         Logger.log(f"start export_data(self, {export_request})")
+        
+        # ENSURE export_request IS A DICTIONARY
+        if isinstance(export_request, str):
+            try:
+                export_request = json.loads(export_request)
+            except json.JSONDecodeError:
+                Logger.log("ValueError: export_request is a string but not a valid JSON.", Logger.LogPriority.ERROR)
+                raise ValueError("export_request must be a dictionary or a valid JSON string.")
+
         if self.system_state.network_loaded and not self.network_manager.state_manager.export_disabled:
             self.export_manager.handle_export_request(self.network_manager.state_manager.network_state_history, export_request)
             Logger.log("Export request processed successfully.")
