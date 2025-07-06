@@ -27,7 +27,8 @@ class ExportManager:
                 image_export = image_export_strategy.generate_export(network_state_history)
 
             # CREATE FOLDER STRUCTURE AND SAVE REPORTS
-            self._save_reports(data_export, image_export, base_folder_location)
+            root_folder = self._create_export_folders(base_folder_location)
+            self._save_reports(data_export, image_export, root_folder)
 
         except Exception as ex:
             Logger.log(f"Error handling export request: {str(ex)}")
@@ -50,10 +51,7 @@ class ExportManager:
         # Return the root folder path
         return root_folder
 
-    def _save_reports(self, data_export, image_export, base_folder_location):
-        """Saves generated reports to the specified folder."""
-        # Create root folder
-        root_folder = self._create_export_folders(base_folder_location)
+    def _save_reports(self, data_export, image_export, root_folder):
 
         # Create subfolders for data and image exports only if there is content
         if data_export:

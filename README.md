@@ -46,7 +46,7 @@ The FibriNet CLI provides a command-line interface for interacting with the appl
 | `redo_degradation`                                          | Redo the last undone degradation                    |
 | `run-simulation`                                            | Run a fibrin polymerization simulation              |
 | `analyze-results`                                           | Analyze output metrics from the simulation          |
-| `export <data_format> <image_format> <folder_path>`         | Export results to a specified format (json, csv, excel, png) |
+| `export network <data_format> <image_format> to <path>`         | Export results to a specified format (json, csv, excel, png) |
 | `config <params>`                                           | Update simulation parameters either interactively or from a file |
 
 ### Command Examples
@@ -62,24 +62,24 @@ input_network test/input_data/INPUT TESTS/TestNetwork.xlsx
 #### Export Network Data
 To export the current network data, use the `export` command. You can specify a data format, an image format, and the output folder. If you don't want to export a certain type, use `none`.
 
-**Syntax:** `export <data_format> <image_format> <folder_path>`
+**Syntax:** `export network <data_format> <image_format> to <path>`
 
--   `<data_format>`: `excel`, `json`, `csv`, or `none`
+-   `<data_format>`: `excel`, or `none`
 -   `<image_format>`: `png` or `none`
--   `<folder_path>`: The absolute or relative path to the folder where the files will be saved.
+-   `<path>`: The absolute path to the folder where the files will be saved.
 
 **Example 1: Exporting both data (Excel) and image (PNG)**
 ```bash
-export excel png C:/Users/manda/Documents/UCO/Research_Work/Gemini_CLI/Fibrinet/test/output
+export network excel png to C:/Users/manda/Documents/UCO/Research_Work/Gemini_CLI/Fibrinet/test/output
 ```
 
-**Example 2: Exporting only data (CSV)**
+**Example 2: Exporting only data (Excel)**
 ```bash
-export csv none C:/Users/manda/Documents/UCO/Research_Work/Gemini_CLI/Fibrinet/test/output
+export network excel none to C:/Users/manda/Documents/UCO/Research_Work/Gemini_CLI/Fibrinet/test/output
 ```
 
 **Example 3: Exporting only an image (PNG)**
 ```bash
-export none png C:/Users/manda/Documents/UCO/Research_Work/Gemini_CLI/Fibrinet/test/output
+export network none png to C:/Users/manda/Documents/UCO/Research_Work/Gemini_CLI/Fibrinet/test/output
 ```
 ""
