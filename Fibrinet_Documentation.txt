@@ -1,0 +1,114 @@
+
+# FibriNet Documentation
+
+This document provides an overview of the FibriNet system, including the Command Line Interface (CLI), the Application Programming Interface (API), and the Docker deployment.
+
+## FibriNet CLI
+
+### Responsibilities
+
+The FibriNet CLI is responsible for providing a command-line-based interface for users to interact with the FibriNet system. It allows for direct control over the network simulation and analysis functionalities.
+
+### Functionalities
+
+The CLI provides the following functionalities:
+
+-   **Network Input:** Load a network model from an external file.
+-   **Node/Edge Degradation:** Simulate the degradation of specific nodes or edges in the network.
+-   **Undo/Redo:** Revert or re-apply the last degradation action.
+-   **Simulation:** Run the simulation on the current state of the network.
+-   **Analysis:** Analyze the network to get performance metrics and other relevant data.
+-   **Data Export:** Export the simulation results and network data to various formats.
+-   **Parameter Updates:** Modify the simulation parameters.
+
+### Workflow
+
+1.  The user launches the FibriNet application from the command line.
+2.  The application initializes the `SystemController`, which manages all the core logic.
+3.  The user is presented with a menu of options to interact with the system.
+4.  The user selects an option, and the CLI calls the corresponding method in the `SystemController`.
+5.  The `SystemController` performs the requested action, and the results are displayed in the console.
+
+### Accessing the CLI
+
+To access the CLI, run the `cli_main.py` script from your terminal:
+
+```bash
+python Fibrinet/cli_main.py
+```
+
+## FibriNet API
+
+### Responsibilities
+
+The FibriNet API is responsible for exposing the functionalities of the FibriNet system over a web interface. It allows for remote control and integration with other applications.
+
+### Functionalities
+
+The API provides the following endpoints:
+
+-   `GET /`: Returns a welcome message to indicate that the API is running.
+-   `POST /input_network/`: Upload an Excel file to load a network model.
+-   `POST /degrade_node/{node_id}`: Degrade a specific node in the network.
+-   `POST /degrade_edge/{edge_id}`: Degrade a specific edge in the network.
+-   `POST /undo_degradation/`: Undo the last degradation.
+-   `POST /redo_degradation/`: Redo the last undone degradation.
+-   `POST /run_simulation/`: Run the simulation.
+-   `GET /analyze_network/`: Analyze the current network state.
+-   `POST /export_data/`: Export simulation data.
+-   `POST /update_parameters/`: Update simulation parameters.
+
+### Workflow
+
+1.  The API is started, which launches a Uvicorn server.
+2.  A client application sends an HTTP request to one of the API endpoints.
+3.  The API receives the request and calls the corresponding method in the `SystemController`.
+4.  The `SystemController` processes the request and returns the results.
+5.  The API formats the results as a JSON response and sends it back to the client.
+
+### Accessing the API
+
+To access the API, you first need to run the `api_main.py` script:
+
+```bash
+uvicorn Fibrinet.api_main:app --reload
+```
+
+You can then access the API at `http://127.0.0.1:8000` in your web browser or through an API client like Postman.
+
+## Docker Deployment
+
+### Responsibilities
+
+The Docker deployment is responsible for creating a containerized version of the FibriNet API, which allows for easy and consistent deployment across different environments.
+
+### Functionalities
+
+-   **Containerization:** Packages the FibriNet API and its dependencies into a single container.
+-   **Portability:** Allows the FibriNet API to run on any system that has Docker installed.
+-   **Scalability:** Can be used with container orchestration tools like Kubernetes to scale the application.
+
+### Workflow
+
+1.  A Docker image is built from the `Dockerfile`. This image contains the Python environment, the required dependencies, and the application code.
+2.  A Docker container is created from the image.
+3.  When the container starts, it runs the `uvicorn` command to launch the FibriNet API.
+4.  The API is now accessible from the host machine on the port that was exposed in the `Dockerfile`.
+
+### Accessing the Application via Docker
+
+To run the FibriNet API in a Docker container, follow these steps:
+
+1.  **Build the Docker image:**
+
+    ```bash
+    docker build -t fibrinet-api .
+    ```
+
+2.  **Run the Docker container:**
+
+    ```bash
+    docker run -p 80:80 fibrinet-api
+    ```
+
+You can then access the API at `http://localhost:80` in your web browser or API client.
