@@ -28,6 +28,7 @@ class SystemController:
         self.view_manager = ViewManager(self)
         self.export_manager = ExportManager()
         self.network_manager = NetworkManager()
+        self.analysis_manager = AnalysisManager()
         self.system_state = SystemState()
         
         Logger.log("SystemControllerInterface initialized.")
