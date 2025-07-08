@@ -70,7 +70,7 @@ class ModifyPage(TkinterView):
             Logger.log(f"Removing {element_type} {input_id}")
             if element_type == "Node": self.view.controller.degrade_node(input_id)
             elif element_type == "Edge": self.view.controller.degrade_edge(input_id)
-            else: raise Exception()
+            else: raise ValueError(f"Unknown element type: {element_type}")
             
             # CLEAR SELECTED ELEMENT
             self.canvas_manager.clear_selected_element()

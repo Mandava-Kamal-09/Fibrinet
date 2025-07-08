@@ -25,7 +25,7 @@ class NoPhysics(DegradationEngineStrategy):
         new_network = copy.deepcopy(network)
 
         if edge_id not in [edge.get_id() for edge in new_network.get_edges()]:
-            raise Exception(f"Edge ID '{edge_id}' not found in network.")
+            raise EdgeNotFoundError(f"Edge ID '{edge_id}' not found in network.")
 
         # REMOVE THE EDGE WITH THE SPECIFIED ID
         new_network.remove_edge(edge_id)
@@ -56,7 +56,7 @@ class NoPhysics(DegradationEngineStrategy):
         new_network = copy.deepcopy(network)
 
         if node_id not in [node.get_id() for node in new_network.get_nodes()]:
-            raise (f"Node ID '{node_id}' not found in network.")
+            raise NodeNotFoundError(f"Node ID '{node_id}' not found in network.")
 
 
         # REMOVE THE NODE WITH THE SPECIFIED ID

@@ -1,3 +1,4 @@
+import os
 from src.managers.view.view_strategy import ViewStrategy
 from src.models.exceptions import StateTransitionError, UnsupportedFileTypeError, InvalidInputDataError
 from utils.logger.logger import Logger
@@ -83,8 +84,10 @@ class CommandLineView(ViewStrategy):
                 # HANDLE NETWORK INPUT COMMAND
                 elif cmd == "input_network" and arg:
                     try:
-                        self.controller.input_network(arg)
-                        print(f">>> Network input successfully processed: {arg}")
+                        # Construct the full path relative to the project root
+                        full_path = os.path.join("Fibrinet", arg)
+                        self.controller.input_network(full_path)
+                        print(f">>> Network input successfully processed: {full_path}")
                         print(f">>> Network now able to modify.")
                     except (FileNotFoundError, UnsupportedFileTypeError, InvalidInputDataError) as ex:
                         print(ex)
@@ -150,8 +153,24 @@ class CommandLineView(ViewStrategy):
                 # HANDLE EXPORT DATA COMMAND
                 elif cmd == "export" and arg:
                     try:
-                        # Construct the full export request string
-                        export_request = f"export_request {arg}"
+                        # arg is "network <data_format> <image_format> to <path>"
+                        arg_parts = arg.split()
+                        
+                        # Validate command structure
+                        if len(arg_parts) < 5 or arg_parts[0].lower() != 'network' or arg_parts[3].lower() != 'to':
+                            print(">>> Invalid export command format. Use: export network <data_format> <image_format> to <path>")
+                            continue
+
+                        data_format = arg_parts[1]
+                        image_format = arg_parts[2]
+                        path = " ".join(arg_parts[4:])
+
+                        export_request = {
+                            "data_format": data_format,
+                            "image_format": image_format,
+                            "path": path
+                        }
+                        
                         Logger.log(f"Exporting Data with request: {export_request}")
                         print(f">>> Exporting Data...")
                         self.controller.export_data(export_request)

@@ -1,6 +1,9 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 from src.controllers.system_controller import SystemController
 from utils.logger.logger import Logger
 import pandas as pd

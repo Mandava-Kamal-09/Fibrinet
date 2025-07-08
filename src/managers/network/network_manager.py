@@ -176,7 +176,7 @@ class NetworkManager:
         
         # CHECK THE EXPORT CONDITION IF ITS TRUE THEN CONTINUE OTHERWISE RAISE EXCEPTION
         if self.state_manager._check_export_condition():
-            raise Exception("Cannot relax network: export condition not met.")
+            raise StateTransitionError("Cannot relax network: export condition not met.")
         
         # SET DEGRADATION ENGINE STRATEGY TO TWO DIMENSIONAL SPRING FORCE DEGRADATION ENGINE WITHOUT BIOMECHANICS
         self.set_degradation_engine_strategy("twodimensionalspringforcedegradationenginewithoutbiomechanics")
