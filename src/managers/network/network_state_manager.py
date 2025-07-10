@@ -104,6 +104,7 @@ class NetworkStateManager:
         :param network_state: The new network state to be added.
         """
         Logger.log(f"start add_new_state({network_state})")
+        Logger.log(f"NetworkStateManager: Adding new state. Network: {network_state}")
         
         # SLICE THE NETWORK STATE HISTORY TO INCLUDE ITEMS FROM CURRENT NETWORK STATE INDEX AND BACK
         self.network_state_history = self.network_state_history[:self.current_network_state_index + 1]
@@ -129,6 +130,7 @@ class NetworkStateManager:
         
         # ENABLE EXPORT IF MORE THAN ONE STATE EXISTS AND ALL META DATA KEYS HAVE VALUES
         self.export_disabled = self._check_export_condition()
+        Logger.log(f"NetworkStateManager: export_disabled after add_new_state: {self.export_disabled}")
         self.log_network_state_manager_attributes()
         Logger.log("end add_new_state")
 

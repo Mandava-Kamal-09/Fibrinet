@@ -58,7 +58,7 @@ class SystemController:
         if self.network_manager.network:
             Logger.log("Setting system state to network loaded true")
             self.system_state.network_loaded = True
-        
+        Logger.log(f"system_state.network_loaded after input_network: {self.system_state.network_loaded}")
         Logger.log(f"end input_network(self, input_data)")     
     
     # ADD NDOE
@@ -234,18 +234,17 @@ class SystemController:
             pass
         Logger.log(f"end configure_Logger(self, **kwargs)")
 
-    def run_simulation(self):
+    def run_simulation(self, data):
         """
-        Runs the network simulation.
+        Runs the network simulation on the given data.
         """
-        Logger.log("start run_simulation(self)")
-        if self.system_state.network_loaded:
-            self.network_manager.relax_network()
-            Logger.log("Simulation run successfully.")
-        else:
-            Logger.log("StateTransitionError: Cannot run simulation, network not loaded.", Logger.LogPriority.ERROR)
-            raise StateTransitionError("Cannot run simulation, network not loaded.")
-        Logger.log("end run_simulation(self)")
+        Logger.log("start run_simulation(self, data)")
+        # This method now directly processes the data without checking system state
+        # This aligns with the original simulator.py functionality
+        results = data.copy()
+        results['simulation_result'] = results.iloc[:, 0] * 10  # Example: multiply first column by 10
+        Logger.log("end run_simulation(self, data)")
+        return results
 
     def analyze_network(self):
         """

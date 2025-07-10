@@ -187,7 +187,7 @@ class CommandLineView(ViewStrategy):
                     kwargs_dict = {}
                     # CALL CONTROLLER TO CONFIGURE Logger
                     self.controller.configure_Logger(enabled, **kwargs_dict)
-                    print(f">>> Logger {"enabled" if enabled == True else "disabled"}")
+                    print(f">>> Logger {'enabled' if enabled == True else 'disabled'}")
                     Logger.log(f"Configured Logger request submitted with: enabled = {enabled}, and kwargs_dict = {kwargs_dict}")
                 # HANDLE INVALID COMMANDS
                 else:

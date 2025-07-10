@@ -1,3 +1,20 @@
-LOG FLUSHED: 2025-07-08 18:04:42.842579
-[2025-07-08 18:04:42] [DEBUG] Logger initialized with default file storage at C:\Users\manda\Documents\UCO\Research_Work\Gemini_CLI\Fibrinet\utils\logger\..\..\utils\logs.txt.
-[2025-07-08 18:04:42] [DEBUG] Logging disabled
+LOG FLUSHED: 2025-07-09 23:18:04.004335
+[2025-07-09 23:18:04] [DEBUG] Logger initialized with default file storage at c:\Users\manda\Documents\UCO\Research_Work\Gemini_CLI\Fibrinet\utils\logger\..\..\utils\logs.txt.
+[2025-07-09 23:18:04] [DEBUG] start SystemControllerInterface__init__(self)
+[2025-07-09 23:18:04] [DEBUG] start InputManager __init__(self)
+[2025-07-09 23:18:04] [DEBUG] start DataInterpreter __init__(self)
+[2025-07-09 23:18:04] [DEBUG] end DataInterpreter __init__(self)
+[2025-07-09 23:18:04] [DEBUG] end InputManager __init__(self)
+[2025-07-09 23:18:04] [DEBUG] start ViewManager __init__(self, <src.controllers.system_controller.SystemController object at 0x00000210FF8157F0>)
+[2025-07-09 23:18:04] [DEBUG] start ViewRequestInterpreter __init__(self)
+[2025-07-09 23:18:04] [DEBUG] ViewRequestInterpreter initialized.
+[2025-07-09 23:18:04] [DEBUG] end ViewRequestInterpreter __init__(self)
+[2025-07-09 23:18:04] [DEBUG] end ViewManager __init__(self, controller)
+[2025-07-09 23:18:04] [DEBUG] start NetworkManager __init__(self)
+[2025-07-09 23:18:04] [DEBUG] start NetworkStateManager__init__
+[2025-07-09 23:18:04] [DEBUG] end NetworkStateManager__init__
+[2025-07-09 23:18:04] [DEBUG] start DegradationEngineStrategy__init__(self)
+[2025-07-09 23:18:04] [DEBUG] end DegradationEngineStrategy__init__(self)
+[2025-07-09 23:18:04] [DEBUG] end NetworkManager __init__(self)
+[2025-07-09 23:18:04] [DEBUG] SystemControllerInterface initialized.
+[2025-07-09 23:18:04] [DEBUG] end SystemControllerInterface__init__(self)

@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 import sys
 import os
@@ -16,7 +16,7 @@ app = FastAPI()
 
 # Initialize Logger and SystemController
 Logger.initialize()
-Logger.disable_logging() # Disable logging for API by default, can be configured via an endpoint if needed
+# Logger.disable_logging() # Disable logging for API by default, can be configured via an endpoint if needed
 controller = SystemController()
 
 class ExportRequest(BaseModel):
@@ -41,15 +41,8 @@ async def input_network(file: UploadFile = File(...)):
     
     try:
         file_content = await file.read()
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-            tmp.write(file_content)
-            tmp_path = tmp.name
-        
-        try:
-            controller.input_network(tmp_path)
-            return JSONResponse(status_code=status.HTTP_200_OK, content={"message": f"Network loaded successfully from {file.filename}"})
-        finally:
-            os.remove(tmp_path) # Clean up the temporary file
+        controller.input_network(io.BytesIO(file_content))
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": f"Network loaded successfully from {file.filename}"})
     except Exception as e:
         Logger.log(f"Error loading network: {e}", Logger.LogPriority.ERROR)
         raise HTTPException(status_code=500, detail=f"Failed to load network: {e}")
@@ -95,14 +88,42 @@ async def redo_degradation():
         raise HTTPException(status_code=500, detail=f"Failed to redo degradation: {e}")
 
 @app.post("/run_simulation/", tags=["Simulation"])
-async def run_simulation():
-    Logger.log("Run simulation endpoint accessed")
+async def run_simulation(file: UploadFile = File(...)):
+    Logger.log(f"Run simulation endpoint accessed with file: {file.filename}")
+    if not file.filename.endswith((".xls", ".xlsx")):
+        Logger.log(f"Invalid file type received: {file.content_type}", Logger.LogPriority.ERROR)
+        raise HTTPException(status_code=400, detail="Invalid file type. Only Excel files (.xls, .xlsx) are allowed.")
+
     try:
-        controller.run_simulation()
-        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Simulation ran successfully"})
+        contents = await file.read()
+        excel_file = io.BytesIO(contents)
+        # Read only the nodes data from the Excel file into a pandas DataFrame
+        nodes_df = pd.read_excel(excel_file, 'Sheet1', skiprows=1, nrows=2, header=None)
+        Logger.log(f"Successfully read nodes data from Excel file: {file.filename}. Shape: {nodes_df.shape}")
+        Logger.log(f"Nodes DataFrame content:\n{nodes_df}")
+
+        # Run the simulation with the extracted nodes data
+        simulation_results_df = controller.run_simulation(nodes_df)
+        Logger.log("Simulation completed successfully.")
+        Logger.log(f"Simulation results DataFrame content:\n{simulation_results_df}")
+
+        # Convert simulation results to CSV in memory
+        csv_buffer = io.StringIO()
+        simulation_results_df.to_csv(csv_buffer, index=False)
+        csv_buffer.seek(0)
+        Logger.log("Converted simulation results to CSV.")
+
+        # Return the CSV as a downloadable file
+        return StreamingResponse(
+            iter([csv_buffer.getvalue()]),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f'attachment; filename="simulation_results_{file.filename}.csv"'
+            }
+        )
     except Exception as e:
-        Logger.log(f"Error running simulation: {e}", Logger.LogPriority.ERROR)
-        raise HTTPException(status_code=500, detail=f"Failed to run simulation: {e}")
+        Logger.log(f"An error occurred during processing: {e}", Logger.LogPriority.ERROR)
+        raise HTTPException(status_code=500, detail=f"An internal server error occurred: {e}")
 
 @app.get("/analyze_network/", tags=["Analysis"])
 async def analyze_network():

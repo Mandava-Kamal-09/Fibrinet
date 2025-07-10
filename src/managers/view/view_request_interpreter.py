@@ -1,5 +1,4 @@
 from src.views.cli_view.cli_view import CommandLineView
-from src.views.tkinter_view.tkinter_view import TkinterView
 from utils.logger.logger import Logger
 
 # INTERPRETS VIEW REQUESTS AND RETURNS APPROPRIATE VIEW STRATEGY
@@ -39,9 +38,8 @@ class ViewRequestInterpreter:
             return CommandLineView(controller)
         
         elif view_request.lower() == "tkinter":
-            Logger.log("Tkinter view strategy selected.")
-            Logger.log(f"end get_view_strategy(self, view_request, controller)")
-            return TkinterView(controller)
+            Logger.log("ValueError: Tkinter view is not supported in this API context.", Logger.LogPriority.ERROR)
+            raise ValueError("Tkinter view is not supported in this API context.")
         
         else:
             Logger.log("ValueError: Invalid view request. Choose 'CLI' or 'Tkinter'.", Logger.LogPriority.ERROR)

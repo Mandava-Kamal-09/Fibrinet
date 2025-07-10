@@ -30,15 +30,8 @@ class InputManager:
 
         # GET DATA PROCESSING STRATEGY FROM INPUT DATA
         try:
-            if isinstance(input_data, str):
-                data_processing_strategy = self.data_interpreter.get_data_processing_strategy(input_data)
-                return data_processing_strategy.process(input_data)
-            else: # Assume it's a file-like object (BytesIO)
-                # For in-memory files, we need to determine the strategy based on content or a hint
-                # For now, assuming it's always an Excel file if it's not a string path
-                from .excel_data_strategy import ExcelDataStrategy
-                data_processing_strategy = ExcelDataStrategy()
-                return data_processing_strategy.process(input_data)
+            data_processing_strategy = self.data_interpreter.get_data_processing_strategy(input_data)
+            return data_processing_strategy.process(input_data)
         except UnsupportedFileTypeError:
             raise
         except FileNotFoundError as ex:

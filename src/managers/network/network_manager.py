@@ -29,6 +29,7 @@ class NetworkManager:
         """
         Logger.log(f"start set_network(self, {network})")
         self.network = network
+        Logger.log(f"NetworkManager.network set to: {self.network}")
         Logger.log(f"end set_network_(self, network)")
 
     # GET BASE NETWORK
