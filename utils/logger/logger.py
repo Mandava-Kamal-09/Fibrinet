@@ -30,16 +30,22 @@ class Logger:
 
     # INITIALIZE LOGGER
     @classmethod
-    def initialize(cls):
+    def initialize(cls, file_location=None):
         """
-        Initializes the Logger with a default storage strategy.
-        Should be called before using the logger to ensure a storage strategy is set.
+        Initializes the logger. If a file_location is provided, it sets up a file-based logging strategy.
+        Otherwise, logging to a file will be disabled.
         """
-        with cls._initialize_lock:
-            if cls.log_storage_strategy is None:
-                file_location = os.path.join(os.path.dirname(__file__), '..', '..', 'utils', 'logs.txt')
-                cls.set_log_storage_strategy(LocalFileStrategy(file_location))
-                cls.log(f"Logger initialized with default file storage at {file_location}.")
+        cls.logs = []
+        cls.log_priority = cls.LogPriority.INFO
+        cls.is_logging_enabled = True
+        if file_location:
+            # Ensure the directory for the log file exists.
+            log_dir = os.path.dirname(file_location)
+            if not os.path.exists(log_dir):
+                os.makedirs(log_dir)
+            cls.set_log_storage_strategy(LocalFileStrategy(file_location))
+        else:
+            cls.strategy = None
 
     # LOG WITH MESSAGE AND PRIORITY
     @classmethod

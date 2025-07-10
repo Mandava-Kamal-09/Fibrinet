@@ -15,20 +15,12 @@ def main():
     # INITIALIZE THE SCI
     controller = SystemController()
 
-    parser = argparse.ArgumentParser(description="FibriNet Command Line Interface for HPC")
-
-    parser.add_argument("--input", type=str, required=True, help="Path to the input Excel file.")
-    parser.add_argument("--output", type=str, required=True, help="Path to the output result file.")
-    parser.add_argument("--degrade-node", type=str, help="ID of the node to degrade.")
-    parser.add_argument("--degrade-edge", type=str, help="ID of the edge to degrade.")
-    parser.add_argument("--run-simulation", action="store_true", help="Run the simulation.")
-    parser.add_argument("--analyze-results", action="store_true", help="Analyze the results.")
-    parser.add_argument("--export", type=str, help="Export the data to the specified format (e.g., 'excel', 'csv').")
+    parser.add_argument("--log-file", type=str, default=None, help="Path to the log file. If not provided, logging to file is disabled.")
 
     args = parser.parse_args()
 
-    # Load the network
-    controller.input_network(args.input)
+    # Initialize logger with the specified file
+    Logger.initialize(args.log_file)
 
     # Perform actions based on arguments
     if args.degrade_node:
