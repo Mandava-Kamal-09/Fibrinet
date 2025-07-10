@@ -1,0 +1,16 @@
+
+Bootstrap: docker
+From: python:3.9-slim-buster
+
+%files
+    . /app
+
+%post
+    # Set the working directory
+    cd /app
+    # Install dependencies
+    pip install --no-cache-dir -r requirements.txt
+
+%runscript
+    echo "Container is ready. Execute the FibriNet CLI."
+    echo "Example: singularity exec my_container.sif python /app/cli_main.py --input /path/to/data --output /path/to/results"
