@@ -163,18 +163,21 @@ class NetworkFactory:
         nodes = data.get("nodes", {})
         edges = data.get("edges", {})
 
-        # CHECKING META_DATA
-        Logger.log("Checking meta_data...")
-        for attr in schema.get("meta_data", []):
-            if attr not in meta_data:
-                # LOGGING MISSING META_DATA ATTRIBUTE
-                Logger.log(f"meta_data: Attribute '{attr}' not found in data. Schema mismatch.")
-                return False
-            else:
-                # LOGGING FOUND META_DATA ATTRIBUTE
-                Logger.log(f"meta_data: Attribute '{attr}' found.")
-        # LOGGING META_DATA CHECK COMPLETE
-        Logger.log("meta_data check complete.")
+        # CHECKING META_DATA - Now optional
+        if "meta_data" in data:
+            Logger.log("Checking meta_data...")
+            for attr in schema.get("meta_data", []):
+                if attr not in meta_data:
+                    # LOGGING MISSING META_DATA ATTRIBUTE
+                    Logger.log(f"meta_data: Attribute '{attr}' not found in data. Schema mismatch.")
+                    return False
+                else:
+                    # LOGGING FOUND META_DATA ATTRIBUTE
+                    Logger.log(f"meta_data: Attribute '{attr}' found.")
+            # LOGGING META_DATA CHECK COMPLETE
+            Logger.log("meta_data check complete.")
+        else:
+            Logger.log("No meta_data found in data, skipping check.")
 
         # CHECKING NODES
         if nodes:

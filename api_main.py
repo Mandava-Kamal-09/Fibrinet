@@ -97,8 +97,13 @@ async def run_simulation(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         excel_file = io.BytesIO(contents)
-        # Read only the nodes data from the Excel file into a pandas DataFrame
-        nodes_df = pd.read_excel(excel_file, 'Sheet1', skiprows=1, nrows=2, header=None)
+        # Read the entire sheet into a pandas DataFrame
+        df = pd.read_excel(excel_file, 'Sheet1', header=None)
+
+        # Find the row where the nodes data starts (e.g., by looking for a specific header)
+        # This is a placeholder and might need to be adjusted based on the actual file format
+        nodes_start_row = 1  # Assuming nodes data starts from the second row
+        nodes_df = df.iloc[nodes_start_row:nodes_start_row+2, :]
         Logger.log(f"Successfully read nodes data from Excel file: {file.filename}. Shape: {nodes_df.shape}")
         Logger.log(f"Nodes DataFrame content:\n{nodes_df}")
 

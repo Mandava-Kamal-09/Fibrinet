@@ -45,7 +45,7 @@ class Logger:
                 os.makedirs(log_dir)
             cls.set_log_storage_strategy(LocalFileStrategy(file_location))
         else:
-            cls.strategy = None
+            cls.log_storage_strategy = None
 
     # LOG WITH MESSAGE AND PRIORITY
     @classmethod

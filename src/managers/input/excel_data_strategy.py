@@ -27,15 +27,20 @@ class ExcelDataStrategy(DataProcessingStrategy):
             # Read the Excel file
             xls = pd.ExcelFile(input_data)
 
-            # Read the nodes, edges, and metadata from the sheets
+            # Read the nodes and edges from the sheets
             nodes_df = pd.read_excel(xls, 'Sheet1', skiprows=0, nrows=3, header=0)
             edges_df = pd.read_excel(xls, 'Sheet1', skiprows=4, nrows=2, header=0)
-            meta_df = pd.read_excel(xls, 'Sheet1', skiprows=7, nrows=2, header=0)
+
+            # Try to read metadata, but don't fail if it's not there
+            try:
+                meta_df = pd.read_excel(xls, 'Sheet1', skiprows=7, nrows=2, header=0)
+                meta_data = meta_df.set_index('key')['value'].to_dict()
+            except Exception:
+                meta_data = {}
 
             # Convert the dataframes to dictionaries
             nodes = nodes_df.to_dict(orient='list')
             edges = edges_df.to_dict(orient='list')
-            meta_data = meta_df.set_index('key')['value'].to_dict()
 
             # Create the tables dictionary
             tables = {
