@@ -1,0 +1,28 @@
+Bootstrap: docker
+From: python:3.10-slim
+
+%labels
+    Maintainer Kamal Mandava
+    Version v1.0
+
+%post
+    apt-get update && apt-get install -y \
+        build-essential \
+        git \
+        libgl1 \
+        libfreetype6 \
+        libxext6 \
+        libxrender1 \
+        && rm -rf /var/lib/apt/lists/*
+    pip install --upgrade pip
+    pip install -r /app/requirements.txt
+
+%files
+    . /app
+
+%environment
+    export PYTHONUNBUFFERED=1
+    export PATH="/app:$PATH"
+
+%runscript
+    exec python /app/cli_main.py "$@"

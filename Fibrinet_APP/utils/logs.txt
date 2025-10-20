@@ -1,0 +1,1010 @@
+LOG FLUSHED: 2025-07-16 18:25:51.865740
+[2025-07-16 18:25:51] [DEBUG] Logger initialized with default file storage at C:\Users\manda\Documents\UCO\Research_Work\Fibrinet-main\Fibrinet-main\utils\logger\..\..\utils\logs.txt.
+[2025-07-16 18:25:51] [DEBUG] FibriNet CLI starting...
+[2025-07-16 18:25:51] [DEBUG] start SystemControllerInterface__init__(self)
+[2025-07-16 18:25:51] [DEBUG] start InputManager __init__(self)
+[2025-07-16 18:25:51] [DEBUG] start DataInterpreter __init__(self)
+[2025-07-16 18:25:51] [DEBUG] end DataInterpreter __init__(self)
+[2025-07-16 18:25:51] [DEBUG] end InputManager __init__(self)
+[2025-07-16 18:25:51] [DEBUG] start ViewManager __init__(self, <src.controllers.system_controller.SystemController object at 0x000002DD035DCDA0>)
+[2025-07-16 18:25:51] [DEBUG] start ViewRequestInterpreter __init__(self)
+[2025-07-16 18:25:51] [DEBUG] ViewRequestInterpreter initialized.
+[2025-07-16 18:25:51] [DEBUG] end ViewRequestInterpreter __init__(self)
+[2025-07-16 18:25:51] [DEBUG] end ViewManager __init__(self, controller)
+[2025-07-16 18:25:51] [DEBUG] start NetworkManager __init__(self)
+[2025-07-16 18:25:51] [DEBUG] start NetworkStateManager__init__
+[2025-07-16 18:25:51] [DEBUG] end NetworkStateManager__init__
+[2025-07-16 18:25:51] [DEBUG] start DegradationEngineStrategy__init__(self)
+[2025-07-16 18:25:51] [DEBUG] end DegradationEngineStrategy__init__(self)
+[2025-07-16 18:25:51] [DEBUG] end NetworkManager __init__(self)
+[2025-07-16 18:25:51] [DEBUG] SystemControllerInterface initialized.
+[2025-07-16 18:25:51] [DEBUG] end SystemControllerInterface__init__(self)
+[2025-07-16 18:25:51] [DEBUG] System controller initialized successfully
+[2025-07-16 18:25:51] [DEBUG] start initiate_view(self, cli)
+[2025-07-16 18:25:51] [DEBUG] start initiate_view_strategy(self, cli, controller)
+[2025-07-16 18:25:51] [DEBUG] start get_view_strategy(self, cli, <src.controllers.system_controller.SystemController object at 0x000002DD035DCDA0>)
+[2025-07-16 18:25:51] [DEBUG] CLI view strategy selected.
+[2025-07-16 18:25:51] [DEBUG] end get_view_strategy(self, view_request, controller)
+[2025-07-16 18:25:51] [DEBUG] Selected view strategy: <src.views.cli_view.cli_view.CommandLineView object at 0x000002DD03961940>
+[2025-07-16 18:25:51] [DEBUG] Starting new view strategy.
+[2025-07-16 18:25:51] [DEBUG] start start_view()
+[2025-07-16 18:25:51] [DEBUG] start clear_view()
+[2025-07-16 18:25:51] [DEBUG] end clear_view()
+[2025-07-16 18:25:51] [DEBUG] start run()
+[2025-07-16 18:26:36] [DEBUG] Processing command: input_network with args: ['test/input_data/TestNetwork.xlsx']
+[2025-07-16 18:26:36] [DEBUG] start input_network(self, test/input_data/TestNetwork.xlsx)
+[2025-07-16 18:26:36] [DEBUG] Setting network from input_manager network
+[2025-07-16 18:26:36] [DEBUG] start reset_network_state(self)
+[2025-07-16 18:26:36] [DEBUG] start reset_network_state()
+[2025-07-16 18:26:36] [DEBUG] end reset_network_state()
+[2025-07-16 18:26:36] [DEBUG] end reset_network_state(self)
+[2025-07-16 18:26:36] [DEBUG] start get_network __init__(self, test/input_data/TestNetwork.xlsx)
+[2025-07-16 18:26:36] [DEBUG] start get_data_processing_strategy __init__(self, test/input_data/TestNetwork.xlsx)
+[2025-07-16 18:26:36] [DEBUG] File details - Name: TestNetwork.xlsx, Size: 9670 bytes, Extension: .xlsx
+[2025-07-16 18:26:36] [DEBUG] This is an Excel file.
+[2025-07-16 18:26:36] [DEBUG] end DataInterpreter __init__(self, input_data)
+[2025-07-16 18:26:36] [DEBUG] start ExcelDataStrategy __init__(self)
+[2025-07-16 18:26:36] [DEBUG] end ExcelDataStrategy __init__(self)
+[2025-07-16 18:26:36] [DEBUG] end get_network __init__(self, input_data)
+[2025-07-16 18:26:36] [DEBUG] start Process __init__(self, test/input_data/TestNetwork.xlsx)
+[2025-07-16 18:26:36] [DEBUG] start create_network(self, {'nodes': {'n_id': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 'n_x': [10, 15, 20, 15, 10, 5, 25, 30, 25, 20, 10, 5], 'n_y': [5, 5, 10, 15, 15, 10, 5, 10, 15, 20, 20, 15], 'is_fixed': [1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1]}, 'edges': {'e_id': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 'n_from': [1, 2, 3, 4, 5, 3, 7, 8, 9, 9, 10, 5, 11, 12, 6, 2, 8, 10, 11, 12], 'n_to': [2, 3, 4, 5, 6, 7, 8, 9, 4, 10, 5, 11, 12, 6, 1, 7, 3, 4, 5, 1], 'rest_length': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}, 'meta_data': {'spring_stiffness_constant': 1}})
+[2025-07-16 18:26:36] [DEBUG] start _matches_schema(self, {'nodes': {'n_id': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 'n_x': [10, 15, 20, 15, 10, 5, 25, 30, 25, 20, 10, 5], 'n_y': [5, 5, 10, 15, 15, 10, 5, 10, 15, 20, 20, 15], 'is_fixed': [1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1]}, 'edges': {'e_id': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 'n_from': [1, 2, 3, 4, 5, 3, 7, 8, 9, 9, 10, 5, 11, 12, 6, 2, 8, 10, 11, 12], 'n_to': [2, 3, 4, 5, 6, 7, 8, 9, 4, 10, 5, 11, 12, 6, 1, 7, 3, 4, 5, 1], 'rest_length': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}, 'meta_data': {'spring_stiffness_constant': 1}})
+[2025-07-16 18:26:36] [DEBUG] Checking meta_data...
+[2025-07-16 18:26:36] [DEBUG] meta_data: Attribute 'spring_stiffness_constant' found.
+[2025-07-16 18:26:36] [DEBUG] meta_data check complete.
+[2025-07-16 18:26:36] [DEBUG] Checking nodes...
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 1, 'n_x': 10, 'n_y': 5, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 1, 'n_x': 10, 'n_y': 5, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 1, 'n_x': 10, 'n_y': 5, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 2, 'n_x': 15, 'n_y': 5, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 2, 'n_x': 15, 'n_y': 5, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 2, 'n_x': 15, 'n_y': 5, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 3, 'n_x': 20, 'n_y': 10, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 3, 'n_x': 20, 'n_y': 10, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 3, 'n_x': 20, 'n_y': 10, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 4, 'n_x': 15, 'n_y': 15, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 4, 'n_x': 15, 'n_y': 15, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 4, 'n_x': 15, 'n_y': 15, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 5, 'n_x': 10, 'n_y': 15, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 5, 'n_x': 10, 'n_y': 15, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 5, 'n_x': 10, 'n_y': 15, 'is_fixed': 0}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 6, 'n_x': 5, 'n_y': 10, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 6, 'n_x': 5, 'n_y': 10, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 6, 'n_x': 5, 'n_y': 10, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 7, 'n_x': 25, 'n_y': 5, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 7, 'n_x': 25, 'n_y': 5, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 7, 'n_x': 25, 'n_y': 5, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 8, 'n_x': 30, 'n_y': 10, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 8, 'n_x': 30, 'n_y': 10, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 8, 'n_x': 30, 'n_y': 10, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 9, 'n_x': 25, 'n_y': 15, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 9, 'n_x': 25, 'n_y': 15, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 9, 'n_x': 25, 'n_y': 15, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 10, 'n_x': 20, 'n_y': 20, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 10, 'n_x': 20, 'n_y': 20, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 10, 'n_x': 20, 'n_y': 20, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 11, 'n_x': 10, 'n_y': 20, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 11, 'n_x': 10, 'n_y': 20, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 11, 'n_x': 10, 'n_y': 20, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_id' found in node {'n_id': 12, 'n_x': 5, 'n_y': 15, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_x' found in node {'n_id': 12, 'n_x': 5, 'n_y': 15, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes: Attribute 'n_y' found in node {'n_id': 12, 'n_x': 5, 'n_y': 15, 'is_fixed': 1}.
+[2025-07-16 18:26:36] [DEBUG] nodes check complete.
+[2025-07-16 18:26:36] [DEBUG] Checking edges...
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 1, 'n_from': 1, 'n_to': 2, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 1, 'n_from': 1, 'n_to': 2, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 1, 'n_from': 1, 'n_to': 2, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 2, 'n_from': 2, 'n_to': 3, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 2, 'n_from': 2, 'n_to': 3, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 2, 'n_from': 2, 'n_to': 3, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 3, 'n_from': 3, 'n_to': 4, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 3, 'n_from': 3, 'n_to': 4, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 3, 'n_from': 3, 'n_to': 4, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 4, 'n_from': 4, 'n_to': 5, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 4, 'n_from': 4, 'n_to': 5, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 4, 'n_from': 4, 'n_to': 5, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 5, 'n_from': 5, 'n_to': 6, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 5, 'n_from': 5, 'n_to': 6, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 5, 'n_from': 5, 'n_to': 6, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 6, 'n_from': 3, 'n_to': 7, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 6, 'n_from': 3, 'n_to': 7, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 6, 'n_from': 3, 'n_to': 7, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 7, 'n_from': 7, 'n_to': 8, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 7, 'n_from': 7, 'n_to': 8, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 7, 'n_from': 7, 'n_to': 8, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 8, 'n_from': 8, 'n_to': 9, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 8, 'n_from': 8, 'n_to': 9, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 8, 'n_from': 8, 'n_to': 9, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 9, 'n_from': 9, 'n_to': 4, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 9, 'n_from': 9, 'n_to': 4, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 9, 'n_from': 9, 'n_to': 4, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 10, 'n_from': 9, 'n_to': 10, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 10, 'n_from': 9, 'n_to': 10, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 10, 'n_from': 9, 'n_to': 10, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 11, 'n_from': 10, 'n_to': 5, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 11, 'n_from': 10, 'n_to': 5, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 11, 'n_from': 10, 'n_to': 5, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 12, 'n_from': 5, 'n_to': 11, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 12, 'n_from': 5, 'n_to': 11, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 12, 'n_from': 5, 'n_to': 11, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 13, 'n_from': 11, 'n_to': 12, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 13, 'n_from': 11, 'n_to': 12, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 13, 'n_from': 11, 'n_to': 12, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 14, 'n_from': 12, 'n_to': 6, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 14, 'n_from': 12, 'n_to': 6, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 14, 'n_from': 12, 'n_to': 6, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 15, 'n_from': 6, 'n_to': 1, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 15, 'n_from': 6, 'n_to': 1, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 15, 'n_from': 6, 'n_to': 1, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 16, 'n_from': 2, 'n_to': 7, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 16, 'n_from': 2, 'n_to': 7, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 16, 'n_from': 2, 'n_to': 7, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 17, 'n_from': 8, 'n_to': 3, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 17, 'n_from': 8, 'n_to': 3, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 17, 'n_from': 8, 'n_to': 3, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 18, 'n_from': 10, 'n_to': 4, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 18, 'n_from': 10, 'n_to': 4, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 18, 'n_from': 10, 'n_to': 4, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 19, 'n_from': 11, 'n_to': 5, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 19, 'n_from': 11, 'n_to': 5, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 19, 'n_from': 11, 'n_to': 5, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'e_id' found in edge {'e_id': 20, 'n_from': 12, 'n_to': 1, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_from' found in edge {'e_id': 20, 'n_from': 12, 'n_to': 1, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges: Attribute 'n_to' found in edge {'e_id': 20, 'n_from': 12, 'n_to': 1, 'rest_length': 1}.
+[2025-07-16 18:26:36] [DEBUG] edges check complete.
+[2025-07-16 18:26:36] [DEBUG] Schema matching successful.
+[2025-07-16 18:26:36] [DEBUG] end _matches_schema(self, data)
+[2025-07-16 18:26:36] [DEBUG] Found matching network type '<class 'src.managers.network.networks.network_2d.Network2D'>'
+[2025-07-16 18:26:36] [DEBUG] Processing node data...
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=1
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=1
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=2
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=0
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=2
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=0
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=3
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=20
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=0
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=3
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=20
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=0
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=4
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=0
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=4
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=0
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=0
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=0
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=6
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=6
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=7
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=25
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=7
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=25
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=8
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=30
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=8
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=30
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=9
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=25
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=9
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=25
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=20
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=20
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=20
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=20
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=11
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=20
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=11
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=10
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=20
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=12
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] Attribute 'is_fixed' not in schema. Validation failed.
+[2025-07-16 18:26:36] [DEBUG] Node class <class 'src.managers.network.nodes.node_2d.Node2D'> failed: Invalid node attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_id=12
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_x=5
+[2025-07-16 18:26:36] [DEBUG] Node attribute added n_y=15
+[2025-07-16 18:26:36] [DEBUG] Node attribute added is_fixed=1
+[2025-07-16 18:26:36] [DEBUG] Starting attribute validation.
+[2025-07-16 18:26:36] [DEBUG] Schema: {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>, 'is_fixed': <class 'bool'>}
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_id
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_x
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: n_y
+[2025-07-16 18:26:36] [DEBUG] Validating attribute: is_fixed
+[2025-07-16 18:26:36] [DEBUG] All attributes are valid.
+[2025-07-16 18:26:36] [DEBUG] end Node __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Processing edge data...
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=1
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=1
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=2
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=1
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=1
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=2
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=2
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=2
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=3
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=2
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=2
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=3
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=3
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=3
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=4
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=3
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=3
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=4
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=4
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=4
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=4
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=4
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=6
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=6
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=6
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=3
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=7
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=6
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=3
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=7
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=7
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=7
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=8
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=7
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=7
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=8
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=8
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=8
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=9
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=8
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=8
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=9
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=9
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=9
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=4
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=9
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=9
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=4
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=10
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=9
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=10
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=10
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=9
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=10
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=11
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=10
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=11
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=10
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=12
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=11
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=12
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=11
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=13
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=11
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=12
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=13
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=11
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=12
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=14
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=12
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=6
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=14
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=12
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=6
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=15
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=6
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=1
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=15
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=6
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=1
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=16
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=2
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=7
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=16
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=2
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=7
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=17
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=8
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=3
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=17
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=8
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=3
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=18
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=10
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=4
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=18
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=10
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=4
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=19
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=11
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=19
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=11
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=5
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=20
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=12
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=1
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] Edge class <class 'src.managers.network.edges.base_edge.BaseEdge'> failed: Invalid Edge attributes according to schema.
+[2025-07-16 18:26:36] [DEBUG] start Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added e_id=20
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_from=12
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added n_to=1
+[2025-07-16 18:26:36] [DEBUG] Edge attribute added rest_length=1
+[2025-07-16 18:26:36] [DEBUG] start validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end validate_attributes(self)
+[2025-07-16 18:26:36] [DEBUG] end Edge __init__(self)
+[2025-07-16 18:26:36] [DEBUG] start Network2D __init__(self, {'nodes': [<src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03B747D0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD022B77A0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD7EDBF260>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03B751F0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD7F82FCE0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD023BBE00>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD039E4E00>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03CB2B10>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD039E6960>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03CB3620>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD039619A0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03CF19A0>], 'edges': [<src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD7EEED370>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03AE2DB0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03CF11F0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B078C0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06A80>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B055E0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07E30>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06480>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B074A0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07800>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B05CA0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07D70>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06960>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07320>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06D50>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06090>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06660>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07590>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B077A0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07D40>], 'meta_data': {'spring_stiffness_constant': 1}})
+[2025-07-16 18:26:36] [DEBUG] start BaseNetwork __init__(self, [<src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03B747D0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD022B77A0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD7EDBF260>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03B751F0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD7F82FCE0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD023BBE00>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD039E4E00>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03CB2B10>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD039E6960>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03CB3620>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD039619A0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03CF19A0>], [<src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD7EEED370>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03AE2DB0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03CF11F0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B078C0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06A80>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B055E0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07E30>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06480>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B074A0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07800>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B05CA0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07D70>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06960>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07320>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06D50>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06090>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06660>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07590>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B077A0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07D40>], {'spring_stiffness_constant': 1}, {'meta_data': ['spring_stiffness_constant'], 'meta_data_types': {'spring_stiffness_constant': <class 'float'>}, 'node_attributes': {'n_id': <class 'int'>, 'n_x': <class 'float'>, 'n_y': <class 'float'>}, 'edge_attributes': {'e_id': <class 'int'>, 'n_from': <class 'int'>, 'n_to': <class 'int'>}})
+[2025-07-16 18:26:36] [DEBUG] ===== Network Properties =====
+[2025-07-16 18:26:36] [DEBUG] Nodes:
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 1, 'n_x': 10, 'n_y': 5, 'is_fixed': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 2, 'n_x': 15, 'n_y': 5, 'is_fixed': 0}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 3, 'n_x': 20, 'n_y': 10, 'is_fixed': 0}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 4, 'n_x': 15, 'n_y': 15, 'is_fixed': 0}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 5, 'n_x': 10, 'n_y': 15, 'is_fixed': 0}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 6, 'n_x': 5, 'n_y': 10, 'is_fixed': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 7, 'n_x': 25, 'n_y': 5, 'is_fixed': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 8, 'n_x': 30, 'n_y': 10, 'is_fixed': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 9, 'n_x': 25, 'n_y': 15, 'is_fixed': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 10, 'n_x': 20, 'n_y': 20, 'is_fixed': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 11, 'n_x': 10, 'n_y': 20, 'is_fixed': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['n_id', 'n_x', 'n_y', 'is_fixed'], 'n_id': 12, 'n_x': 5, 'n_y': 15, 'is_fixed': 1}
+[2025-07-16 18:26:36] [DEBUG] Edges:
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 1, 'n_from': 1, 'n_to': 2, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 2, 'n_from': 2, 'n_to': 3, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 3, 'n_from': 3, 'n_to': 4, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 4, 'n_from': 4, 'n_to': 5, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 5, 'n_from': 5, 'n_to': 6, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 6, 'n_from': 3, 'n_to': 7, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 7, 'n_from': 7, 'n_to': 8, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 8, 'n_from': 8, 'n_to': 9, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 9, 'n_from': 9, 'n_to': 4, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 10, 'n_from': 9, 'n_to': 10, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 11, 'n_from': 10, 'n_to': 5, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 12, 'n_from': 5, 'n_to': 11, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 13, 'n_from': 11, 'n_to': 12, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 14, 'n_from': 12, 'n_to': 6, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 15, 'n_from': 6, 'n_to': 1, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 16, 'n_from': 2, 'n_to': 7, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 17, 'n_from': 8, 'n_to': 3, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 18, 'n_from': 10, 'n_to': 4, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 19, 'n_from': 11, 'n_to': 5, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] {'attributes': ['e_id', 'n_from', 'n_to', 'rest_length'], 'e_id': 20, 'n_from': 12, 'n_to': 1, 'rest_length': 1}
+[2025-07-16 18:26:36] [DEBUG] Meta Properties:
+[2025-07-16 18:26:36] [DEBUG] spring_stiffness_constant: 1
+[2025-07-16 18:26:36] [DEBUG] ==============================
+[2025-07-16 18:26:36] [DEBUG] end BaseNetwork __init__(self, nodes, edges, meta_data, schema)
+[2025-07-16 18:26:36] [DEBUG] end Network2D __init__(self, {'nodes': [<src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03B747D0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD022B77A0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD7EDBF260>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03B751F0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD7F82FCE0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD023BBE00>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD039E4E00>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03CB2B10>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD039E6960>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03CB3620>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD039619A0>, <src.managers.network.nodes.fixable_node_2d.FixableNode2D object at 0x000002DD03CF19A0>], 'edges': [<src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD7EEED370>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03AE2DB0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03CF11F0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B078C0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06A80>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B055E0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07E30>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06480>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B074A0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07800>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B05CA0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07D70>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06960>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07320>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06D50>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06090>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B06660>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07590>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B077A0>, <src.managers.network.edges.edge_with_rest_length.EdgeWithRestLength object at 0x000002DD03B07D40>], 'meta_data': {'spring_stiffness_constant': 1}})
+[2025-07-16 18:26:36] [DEBUG] Network created successfully: <src.managers.network.networks.network_2d.Network2D object at 0x000002DD03961910>
+[2025-07-16 18:26:36] [DEBUG] start create_network(self, data)
+[2025-07-16 18:26:36] [DEBUG] end Process __init__(self, input_data)
+[2025-07-16 18:26:36] [DEBUG] start set_network(self, <src.managers.network.networks.network_2d.Network2D object at 0x000002DD03961910>)
+[2025-07-16 18:26:36] [DEBUG] end set_network_(self, network)
+[2025-07-16 18:26:36] [DEBUG] start add_new_state(<src.managers.network.networks.network_2d.Network2D object at 0x000002DD03961910>)
+[2025-07-16 18:26:36] [DEBUG] start _check_export_condition()
+[2025-07-16 18:26:36] [DEBUG] end _check_export_condition()
+[2025-07-16 18:26:36] [DEBUG] Logging NetworkStateManager attributes:
+[2025-07-16 18:26:36] [DEBUG]   network_state_history (length): 1
+[2025-07-16 18:26:36] [DEBUG]   current_state: <src.managers.network.networks.network_2d.Network2D object at 0x000002DD7FA3DDC0>
+[2025-07-16 18:26:36] [DEBUG]   current_network_state_index: 0
+[2025-07-16 18:26:36] [DEBUG]   undo_disabled: True
+[2025-07-16 18:26:36] [DEBUG]   redo_disabled: True
+[2025-07-16 18:26:36] [DEBUG]   export_disabled: False
+[2025-07-16 18:26:36] [DEBUG] end add_new_state
+[2025-07-16 18:26:36] [DEBUG] Is a network loaded? True
+[2025-07-16 18:26:36] [DEBUG] Setting system state to network loaded true
+[2025-07-16 18:26:36] [DEBUG] end input_network(self, input_data)
+[2025-07-16 18:26:36] [DEBUG] start get_network(self)
+[2025-07-16 18:26:36] [DEBUG] end get_network_(self, network)
+[2025-07-16 18:26:57] [DEBUG] Processing command: status with args: []
+[2025-07-16 18:26:57] [DEBUG] start get_network(self)
+[2025-07-16 18:26:57] [DEBUG] end get_network_(self, network)
+[2025-07-16 18:27:08] [DEBUG] Processing command: degrade_node with args: ['1']
+[2025-07-16 18:27:08] [DEBUG] start degrade_node(self, 1)
+[2025-07-16 18:27:08] [DEBUG] start degrade_node(self, 1)
+[2025-07-16 18:27:08] [DEBUG] start degrade_node(self, network, 1)
+[2025-07-16 18:27:08] [DEBUG] start 2dwithoutbio relax_network(self, network=<src.managers.network.networks.network_2d.Network2D object at 0x000002DD023BB710>)
+[2025-07-16 18:27:08] [DEBUG] end 2dwithoutbio relax_network(self, network=<src.managers.network.networks.network_2d.Network2D object at 0x000002DD023BB710>)
+[2025-07-16 18:27:08] [DEBUG] end degrade_node(self, network, 1)
+[2025-07-16 18:27:08] [DEBUG] start add_new_state(<src.managers.network.networks.network_2d.Network2D object at 0x000002DD023BB710>)
+[2025-07-16 18:27:08] [DEBUG] start _check_export_condition()
+[2025-07-16 18:27:08] [DEBUG] end _check_export_condition()
+[2025-07-16 18:27:08] [DEBUG] Logging NetworkStateManager attributes:
+[2025-07-16 18:27:08] [DEBUG]   network_state_history (length): 2
+[2025-07-16 18:27:08] [DEBUG]   current_state: <src.managers.network.networks.network_2d.Network2D object at 0x000002DD03B747D0>
+[2025-07-16 18:27:08] [DEBUG]   current_network_state_index: 1
+[2025-07-16 18:27:08] [DEBUG]   undo_disabled: False
+[2025-07-16 18:27:08] [DEBUG]   redo_disabled: True
+[2025-07-16 18:27:08] [DEBUG]   export_disabled: False
+[2025-07-16 18:27:08] [DEBUG] end add_new_state
+[2025-07-16 18:27:08] [DEBUG] end degrade_node(self, node_id)
+[2025-07-16 18:27:08] [DEBUG] end degrade_node(self, 1)
+[2025-07-16 18:27:13] [DEBUG] Processing command: degrade_edge with args: ['2']
+[2025-07-16 18:27:13] [DEBUG] start degrade_edge(self, 2)
+[2025-07-16 18:27:13] [DEBUG] start degrade_edge(self, 2)
+[2025-07-16 18:27:13] [DEBUG] start degrade_edge(self, network, 2)
+[2025-07-16 18:27:13] [DEBUG] start 2dwithoutbio relax_network(self, network=<src.managers.network.networks.network_2d.Network2D object at 0x000002DD7F82FCE0>)
+[2025-07-16 18:27:13] [DEBUG] end 2dwithoutbio relax_network(self, network=<src.managers.network.networks.network_2d.Network2D object at 0x000002DD7F82FCE0>)
+[2025-07-16 18:27:13] [DEBUG] end degrade_edge(self, network, 2)
+[2025-07-16 18:27:13] [DEBUG] start add_new_state(<src.managers.network.networks.network_2d.Network2D object at 0x000002DD7F82FCE0>)
+[2025-07-16 18:27:13] [DEBUG] start _check_export_condition()
+[2025-07-16 18:27:13] [DEBUG] end _check_export_condition()
+[2025-07-16 18:27:13] [DEBUG] Logging NetworkStateManager attributes:
+[2025-07-16 18:27:13] [DEBUG]   network_state_history (length): 3
+[2025-07-16 18:27:13] [DEBUG]   current_state: <src.managers.network.networks.network_2d.Network2D object at 0x000002DD03B751F0>
+[2025-07-16 18:27:13] [DEBUG]   current_network_state_index: 2
+[2025-07-16 18:27:13] [DEBUG]   undo_disabled: False
+[2025-07-16 18:27:13] [DEBUG]   redo_disabled: True
+[2025-07-16 18:27:13] [DEBUG]   export_disabled: False
+[2025-07-16 18:27:13] [DEBUG] end add_new_state
+[2025-07-16 18:27:13] [DEBUG] end degrade_edge(self, edge_id)
+[2025-07-16 18:27:13] [DEBUG] end degrade_edge(self, 2)
+[2025-07-16 18:27:19] [DEBUG] Processing command: undo with args: []
+[2025-07-16 18:27:19] [DEBUG] start undo_degradation(self)
+[2025-07-16 18:27:19] [DEBUG] start undo_degradation(self)
+[2025-07-16 18:27:19] [DEBUG] start undo_last_state()
+[2025-07-16 18:27:19] [DEBUG] start _check_export_condition()
+[2025-07-16 18:27:19] [DEBUG] end _check_export_condition()
+[2025-07-16 18:27:19] [DEBUG] Logging NetworkStateManager attributes:
+[2025-07-16 18:27:19] [DEBUG]   network_state_history (length): 3
+[2025-07-16 18:27:19] [DEBUG]   current_state: <src.managers.network.networks.network_2d.Network2D object at 0x000002DD03B747D0>
+[2025-07-16 18:27:19] [DEBUG]   current_network_state_index: 1
+[2025-07-16 18:27:19] [DEBUG]   undo_disabled: False
+[2025-07-16 18:27:19] [DEBUG]   redo_disabled: False
+[2025-07-16 18:27:19] [DEBUG]   export_disabled: False
+[2025-07-16 18:27:19] [DEBUG] end undo_last_state
+[2025-07-16 18:27:19] [DEBUG] end undo_degradation(self)
+[2025-07-16 18:27:19] [DEBUG] end undo_degradation(self)
+[2025-07-16 18:27:24] [DEBUG] Processing command: relax with args: []
+[2025-07-16 18:27:24] [DEBUG] start network manager relax_network(self)
+[2025-07-16 18:27:24] [DEBUG] start _check_export_condition()
+[2025-07-16 18:27:24] [DEBUG] end _check_export_condition()
+[2025-07-16 18:27:24] [DEBUG] start set_degradation_engine_strategy(self, twodimensionalspringforcedegradationenginewithoutbiomechanics)
+[2025-07-16 18:27:24] [DEBUG] start DegradationEngineStrategy__init__(self)
+[2025-07-16 18:27:24] [DEBUG] end DegradationEngineStrategy__init__(self)
+[2025-07-16 18:27:24] [DEBUG] end set_degradation_engine_strategy(self, degradation_engine_strategy)
+[2025-07-16 18:27:24] [DEBUG] start 2dwithoutbio relax_network(self, network=<src.managers.network.networks.network_2d.Network2D object at 0x000002DD03B747D0>)
+[2025-07-16 18:27:24] [DEBUG] end 2dwithoutbio relax_network(self, network=<src.managers.network.networks.network_2d.Network2D object at 0x000002DD03B747D0>)
+[2025-07-16 18:27:24] [DEBUG] start add_new_state(<src.managers.network.networks.network_2d.Network2D object at 0x000002DD03B747D0>)
+[2025-07-16 18:27:24] [DEBUG] start _check_export_condition()
+[2025-07-16 18:27:24] [DEBUG] end _check_export_condition()
+[2025-07-16 18:27:24] [DEBUG] Logging NetworkStateManager attributes:
+[2025-07-16 18:27:24] [DEBUG]   network_state_history (length): 3
+[2025-07-16 18:27:24] [DEBUG]   current_state: <src.managers.network.networks.network_2d.Network2D object at 0x000002DD03DB5220>
+[2025-07-16 18:27:24] [DEBUG]   current_network_state_index: 2
+[2025-07-16 18:27:24] [DEBUG]   undo_disabled: False
+[2025-07-16 18:27:24] [DEBUG]   redo_disabled: True
+[2025-07-16 18:27:24] [DEBUG]   export_disabled: False
+[2025-07-16 18:27:24] [DEBUG] end add_new_state
+[2025-07-16 18:27:24] [DEBUG] start update_degradation_engine_strategy(self)
+[2025-07-16 18:27:24] [DEBUG] Network is not new, using TwoDimensionalSpringForceDegradationEngineWithoutBiomechanics strategy.
+[2025-07-16 18:27:24] [DEBUG] start set_degradation_engine_strategy(self, twodimensionalspringforcedegradationenginewithoutbiomechanics)
+[2025-07-16 18:27:24] [DEBUG] start DegradationEngineStrategy__init__(self)
+[2025-07-16 18:27:24] [DEBUG] end DegradationEngineStrategy__init__(self)
+[2025-07-16 18:27:24] [DEBUG] end set_degradation_engine_strategy(self, degradation_engine_strategy)
+[2025-07-16 18:27:24] [DEBUG] end network manager  relax_network(self)
+[2025-07-16 18:27:53] [DEBUG] Processing command: export with args: ['excel_data_export_strategy', 'png_image_export_strategy', './exports']
+[2025-07-16 18:27:53] [DEBUG] start export_data(self, export_request excel_data_export_strategy png_image_export_strategy ./exports)
+[2025-07-16 18:27:53] [DEBUG] start parse_request(self, export_request excel_data_export_strategy png_image_export_strategy ./exports)
+[2025-07-16 18:27:53] [DEBUG] Parsing request: export_request excel_data_export_strategy png_image_export_strategy ./exports
+[2025-07-16 18:27:53] [DEBUG] Request starts correctly with 'export_request', stripping prefix
+[2025-07-16 18:27:53] [DEBUG] Split request into parts: ['excel_data_export_strategy', 'png_image_export_strategy', './exports']
+[2025-07-16 18:27:53] [DEBUG] Extracted data_export_strategy: excel_data_export_strategy, image_export_strategy: png_image_export_strategy, folder_location: ./exports
+[2025-07-16 18:27:53] [DEBUG] Instantiating data export strategy: excel_data_export_strategy
+[2025-07-16 18:27:53] [DEBUG] Instantiating image export strategy: png_image_export_strategy
+[2025-07-16 18:27:53] [DEBUG] Request parsed successfully. Returning result.
+[2025-07-16 18:27:53] [DEBUG] start parse_request(self, request_str)
+[2025-07-16 18:27:53] [DEBUG] Created folder: ./exports
+[2025-07-16 18:27:53] [DEBUG] Folder verified: ./exports
+[2025-07-16 18:27:53] [DEBUG] Starting Excel export generation
+[2025-07-16 18:27:53] [DEBUG] Processing network: <src.managers.network.networks.network_2d.Network2D object at 0x000002DD7FA3DDC0>
+[2025-07-16 18:27:53] [DEBUG] Number of nodes: 12
+[2025-07-16 18:27:53] [DEBUG] Number of edges: 20
+[2025-07-16 18:27:53] [DEBUG] Metadata: {'spring_stiffness_constant': 1}
+[2025-07-16 18:27:53] [DEBUG] Cleaning nodes data (excluding 'attributes' field)
+[2025-07-16 18:27:53] [DEBUG] Processed nodes dataframe with 12 rows
+[2025-07-16 18:27:53] [DEBUG] Cleaning edges data (excluding 'attributes' field)
+[2025-07-16 18:27:53] [DEBUG] Processed edges dataframe with 20 rows
+[2025-07-16 18:27:53] [DEBUG] Converting metadata to dataframe
+[2025-07-16 18:27:53] [DEBUG] Processed metadata dataframe with 1 rows
+[2025-07-16 18:27:53] [DEBUG] Creating in-memory Excel file
+[2025-07-16 18:27:53] [DEBUG] Writing nodes data to Excel starting at row 0
+[2025-07-16 18:27:53] [DEBUG] Writing edges data to Excel starting at row 14
+[2025-07-16 18:27:53] [DEBUG] Writing metadata data to Excel starting at row 36
+[2025-07-16 18:27:54] [DEBUG] Excel export generated successfully for this network. Saved as network_data_20250716_182754_1.xlsx
+[2025-07-16 18:27:54] [DEBUG] Processing network: <src.managers.network.networks.network_2d.Network2D object at 0x000002DD03B747D0>
+[2025-07-16 18:27:54] [DEBUG] Number of nodes: 11
+[2025-07-16 18:27:54] [DEBUG] Number of edges: 17
+[2025-07-16 18:27:54] [DEBUG] Metadata: {'spring_stiffness_constant': 1}
+[2025-07-16 18:27:54] [DEBUG] Cleaning nodes data (excluding 'attributes' field)
+[2025-07-16 18:27:54] [DEBUG] Processed nodes dataframe with 11 rows
+[2025-07-16 18:27:54] [DEBUG] Cleaning edges data (excluding 'attributes' field)
+[2025-07-16 18:27:54] [DEBUG] Processed edges dataframe with 17 rows
+[2025-07-16 18:27:54] [DEBUG] Converting metadata to dataframe
+[2025-07-16 18:27:54] [DEBUG] Processed metadata dataframe with 1 rows
+[2025-07-16 18:27:54] [DEBUG] Creating in-memory Excel file
+[2025-07-16 18:27:54] [DEBUG] Writing nodes data to Excel starting at row 0
+[2025-07-16 18:27:54] [DEBUG] Writing edges data to Excel starting at row 13
+[2025-07-16 18:27:54] [DEBUG] Writing metadata data to Excel starting at row 32
+[2025-07-16 18:27:54] [DEBUG] Excel export generated successfully for this network. Saved as network_data_20250716_182754_2.xlsx
+[2025-07-16 18:27:54] [DEBUG] Processing network: <src.managers.network.networks.network_2d.Network2D object at 0x000002DD03DB5220>
+[2025-07-16 18:27:54] [DEBUG] Number of nodes: 11
+[2025-07-16 18:27:54] [DEBUG] Number of edges: 17
+[2025-07-16 18:27:54] [DEBUG] Metadata: {'spring_stiffness_constant': 1}
+[2025-07-16 18:27:54] [DEBUG] Cleaning nodes data (excluding 'attributes' field)
+[2025-07-16 18:27:54] [DEBUG] Processed nodes dataframe with 11 rows
+[2025-07-16 18:27:54] [DEBUG] Cleaning edges data (excluding 'attributes' field)
+[2025-07-16 18:27:54] [DEBUG] Processed edges dataframe with 17 rows
+[2025-07-16 18:27:54] [DEBUG] Converting metadata to dataframe
+[2025-07-16 18:27:54] [DEBUG] Processed metadata dataframe with 1 rows
+[2025-07-16 18:27:54] [DEBUG] Creating in-memory Excel file
+[2025-07-16 18:27:54] [DEBUG] Writing nodes data to Excel starting at row 0
+[2025-07-16 18:27:54] [DEBUG] Writing edges data to Excel starting at row 13
+[2025-07-16 18:27:54] [DEBUG] Writing metadata data to Excel starting at row 32
+[2025-07-16 18:27:54] [DEBUG] Excel export generated successfully for this network. Saved as network_data_20250716_182754_3.xlsx
+[2025-07-16 18:27:54] [DEBUG] Excel export generation completed
+[2025-07-16 18:27:54] [DEBUG] Created root folder: ./exports\export_20250716_182754
+[2025-07-16 18:27:54] [DEBUG] Created folder: ./exports\export_20250716_182754\data_export
+[2025-07-16 18:27:54] [DEBUG] Saved file: ./exports\export_20250716_182754\data_export\network_data_20250716_182754_1.xlsx
+[2025-07-16 18:27:54] [DEBUG] Saved file: ./exports\export_20250716_182754\data_export\network_data_20250716_182754_2.xlsx
+[2025-07-16 18:27:54] [DEBUG] Saved file: ./exports\export_20250716_182754\data_export\network_data_20250716_182754_3.xlsx
+[2025-07-16 18:27:54] [DEBUG] Created folder: ./exports\export_20250716_182754\image_export
+[2025-07-16 18:27:54] [DEBUG] Saved file: ./exports\export_20250716_182754\image_export\combined_network.png
+[2025-07-16 18:27:54] [DEBUG] Export request processed successfully.
+[2025-07-16 18:27:54] [DEBUG] end export_data(self, export_request)

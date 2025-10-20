@@ -1,0 +1,32 @@
+[H[2J[3J============================================================
+           FIBRINET COMMAND LINE INTERFACE
+============================================================
+Network Modeling and Degradation Analysis Tool
+Type 'help' to see available commands
+Type 'exit' or 'quit' to exit
+============================================================
+
+FibriNet> >>> Network loaded successfully from: test/input_data/fibrin_network_big.xlsx
+>>> Network contains 41 nodes and 50 edges
+
+FibriNet> >>> Node 5 degraded successfully
+
+FibriNet> >>> Node 12 degraded successfully
+
+FibriNet> >>> Node 33 degraded successfully
+
+FibriNet> >>> Last degradation undone successfully
+
+FibriNet> >>> Last undone degradation redone successfully
+
+FibriNet> >>> Edge 6 degraded successfully
+
+FibriNet> >>> Edge 35 degraded successfully
+
+FibriNet> >>> Edge 25 degraded successfully
+
+FibriNet> >>> Export completed successfully to: ./exports
+
+FibriNet> 
+>>> FibriNet CLI stopped. Goodbye!
+
