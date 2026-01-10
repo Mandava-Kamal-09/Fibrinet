@@ -12,7 +12,7 @@ from .fibrinet_core_v2 import (
     ExcelNetworkLoader,
 )
 
-from .fibrinet_core_v2_adapter import CoreV2NetworkAdapter
+from .fibrinet_core_v2_adapter import CoreV2GUIAdapter
 
 __all__ = [
     "WLCFiber",
@@ -20,5 +20,5 @@ __all__ = [
     "HybridMechanochemicalSimulation",
     "PhysicalConstants",
     "ExcelNetworkLoader",
-    "CoreV2NetworkAdapter",
+    "CoreV2GUIAdapter",
 ]
