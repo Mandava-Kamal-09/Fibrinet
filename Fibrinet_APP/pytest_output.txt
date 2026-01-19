@@ -1,0 +1,818 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.4, pytest-9.0.1, pluggy-1.6.0 -- C:\Users\manda\AppData\Local\Programs\Python\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\manda\Documents\UCO\Fibrinet-main\Fibrinet_APP
+plugins: anyio-4.9.0
+collecting ... collected 161 items
+
+tests/network/test_binding_integration.py::test_binding_kinetics_integration FAILED [  0%]
+tests/network/test_force_laws.py::TestHookean::test_zero_extension PASSED [  1%]
+tests/network/test_force_laws.py::TestHookean::test_positive_extension PASSED [  1%]
+tests/network/test_force_laws.py::TestHookean::test_compression_extension_only PASSED [  2%]
+tests/network/test_force_laws.py::TestHookean::test_compression_bidirectional PASSED [  3%]
+tests/network/test_force_laws.py::TestHookean::test_invalid_length PASSED [  3%]
+tests/network/test_force_laws.py::TestHookean::test_invalid_params PASSED [  4%]
+tests/network/test_force_laws.py::TestWLC::test_rupture_at_contour_length PASSED [  4%]
+tests/network/test_force_laws.py::TestWLC::test_monotone_increasing PASSED [  5%]
+tests/network/test_force_laws.py::TestWLC::test_low_strain_equivalence PASSED [  6%]
+tests/network/test_force_laws.py::TestWLC::test_low_strain_stiffness_function PASSED [  6%]
+tests/network/test_force_laws.py::TestWLC::test_invalid_length PASSED    [  7%]
+tests/network/test_force_laws.py::TestWLC::test_invalid_params PASSED    [  8%]
+tests/network/test_force_laws.py::TestWLC::test_tension_only PASSED      [  8%]
+tests/network/test_force_laws.py::TestWLC::test_near_contour_length_stability PASSED [  9%]
+tests/network/test_force_laws.py::TestUnits::test_kbt_value PASSED       [  9%]
+tests/network/test_force_laws.py::TestUnits::test_hooke_wlc_equivalence_at_low_strain PASSED [ 10%]
+tests/network/test_force_laws.py::TestDataclasses::test_hookean_params_validation PASSED [ 11%]
+tests/network/test_force_laws.py::TestDataclasses::test_wlc_params_validation PASSED [ 11%]
+tests/network/test_force_laws.py::TestDataclasses::test_wlc_params_low_strain_property PASSED [ 12%]
+tests/network/test_phase0_backward_compat.py::test_phase1edgesnapshot_still_exists PASSED [ 13%]
+tests/network/test_phase0_backward_compat.py::test_phase1edgesnapshot_frozen_constraint PASSED [ 13%]
+tests/network/test_phase0_backward_compat.py::test_no_import_errors_with_feature_flags PASSED [ 14%]
+tests/network/test_phase0_backward_compat.py::test_feature_flag_backward_compat_mode PASSED [ 14%]
+tests/network/test_phase0_feature_flags.py::test_feature_flag_import PASSED [ 15%]
+tests/network/test_phase0_feature_flags.py::test_feature_flag_defaults PASSED [ 16%]
+tests/network/test_phase0_feature_flags.py::test_feature_flag_enable_spatial_plasmin PASSED [ 16%]
+tests/network/test_phase0_feature_flags.py::test_feature_flag_legacy_mode_reset PASSED [ 17%]
+tests/network/test_phase0_feature_flags.py::test_feature_flag_validation PASSED [ 18%]
+tests/network/test_phase0_feature_flags.py::test_feature_flag_toggles_preserve_module_state PASSED [ 18%]
+tests/network/test_phase0_feature_flags.py::test_legacy_mode_is_default FAILED [ 19%]
+tests/network/test_phase1_data_models.py::TestPlasminBindingSiteImmutability::test_plasmin_site_is_immutable PASSED [ 19%]
+tests/network/test_phase1_data_models.py::TestPlasminBindingSiteImmutability::test_plasmin_site_with_damage_creates_new_instance PASSED [ 20%]
+tests/network/test_phase1_data_models.py::TestPlasminBindingSiteInvariants::test_position_parametric_must_be_in_0_1 PASSED [ 21%]
+tests/network/test_phase1_data_models.py::TestPlasminBindingSiteInvariants::test_damage_depth_must_be_in_0_1 PASSED [ 21%]
+tests/network/test_phase1_data_models.py::TestPlasminBindingSiteInvariants::test_world_coordinates_must_be_finite PASSED [ 22%]
+tests/network/test_phase1_data_models.py::TestPlasminBindingSiteSeverance::test_is_severed_default_critical PASSED [ 22%]
+tests/network/test_phase1_data_models.py::TestPlasminBindingSiteSeverance::test_is_severed_custom_critical PASSED [ 23%]
+tests/network/test_phase1_data_models.py::TestPhase1EdgeSnapshotBackwardCompat::test_legacy_edge_creation PASSED [ 24%]
+tests/network/test_phase1_data_models.py::TestPhase1EdgeSnapshotBackwardCompat::test_legacy_S_effective_returns_stored_S PASSED [ 24%]
+tests/network/test_phase1_data_models.py::TestPhase1EdgeSnapshotBackwardCompat::test_legacy_is_ruptured_checks_S FAILED [ 25%]
+tests/network/test_phase1_data_models.py::TestPhase1EdgeSnapshotSpatialMode::test_spatial_S_effective_computed_from_damage FAILED [ 26%]
+tests/network/test_phase1_data_models.py::TestPhase1EdgeSnapshotSpatialMode::test_spatial_is_ruptured_checks_critical_damage FAILED [ 26%]
+tests/network/test_phase1_data_models.py::TestPhase1EdgeSnapshotFrozen::test_edge_is_immutable PASSED [ 27%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerStateless::test_manager_has_no_persistent_state FAILED [ 27%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerStateless::test_multiple_instances_are_independent PASSED [ 28%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerDeterminism::test_initialize_edge_deterministic_output FAILED [ 29%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerDeterminism::test_update_edge_damage_deterministic_accumulation PASSED [ 29%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerDeterminism::test_select_binding_targets_deterministic_selection FAILED [ 30%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerImmutability::test_initialize_edge_no_input_mutation FAILED [ 31%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerImmutability::test_update_edge_damage_returns_new_edge PASSED [ 31%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerImmutability::test_is_edge_lysed_no_side_effects PASSED [ 32%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerLegacyBypass::test_initialize_edge_legacy_returns_unchanged PASSED [ 32%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerLegacyBypass::test_update_edge_damage_legacy_returns_unchanged PASSED [ 33%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerLegacyBypass::test_is_edge_lysed_legacy_returns_false PASSED [ 34%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerLegacyBypass::test_select_binding_targets_legacy_returns_empty PASSED [ 34%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerDamageAccumulation::test_damage_accumulates_correctly PASSED [ 35%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerDamageAccumulation::test_damage_clamped_to_one PASSED [ 36%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerDamageAccumulation::test_severance_detection_at_critical_threshold PASSED [ 36%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerDamageAccumulation::test_multiple_sites_lysis_on_any_severed PASSED [ 37%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerEdgeCases::test_initialize_edge_empty_sites FAILED [ 37%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerEdgeCases::test_update_edge_damage_empty_sites PASSED [ 38%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerEdgeCases::test_select_binding_targets_empty_edges PASSED [ 39%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerEdgeCases::test_select_binding_targets_invalid_sigma_ref PASSED [ 39%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerEdgeCases::test_damage_accumulation_with_zero_rate PASSED [ 40%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminDamageResult::test_result_is_immutable PASSED [ 40%]
+tests/network/test_phase2_plasmin_manager.py::TestPlasminDamageResult::test_result_fields PASSED [ 41%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineStateless::test_engine_has_no_persistent_state FAILED [ 42%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineStateless::test_multiple_instances_are_independent PASSED [ 42%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineDeterminism::test_evolve_edges_deterministic_legacy FAILED [ 43%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineLegacyBypass::test_legacy_path_produces_results FAILED [ 44%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineSpatialPath::test_spatial_path_produces_results FAILED [ 44%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineImmutability::test_evolve_edges_no_input_mutation FAILED [ 45%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineImmutability::test_evolve_edges_returns_new_edges FAILED [ 45%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEnginePercolation::test_percolation_connected_simple PASSED [ 46%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEnginePercolation::test_percolation_disconnected_simple PASSED [ 47%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEnginePercolation::test_percolation_multiple_paths PASSED [ 47%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEnginePercolation::test_percolation_empty_edges PASSED [ 48%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEnginePercolation::test_percolation_empty_boundaries PASSED [ 49%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionResult::test_result_fields PASSED [ 49%]
+tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionResult::test_result_repr PASSED [ 50%]
+tests/network/test_phase4_1_executed_validation.py::test_deterministic_replay_executed FAILED [ 50%]
+tests/network/test_phase4_1_executed_validation.py::test_percolation_termination_executed FAILED [ 51%]
+tests/network/test_phase4_1_executed_validation.py::test_export_consistency_executed FAILED [ 52%]
+tests/network/test_phase4_1_executed_validation.py::test_scientific_invariants_executed FAILED [ 52%]
+tests/network/test_phase4_deterministic_replay.py::test_deterministic_replay_identical_seeds PASSED [ 53%]
+tests/network/test_phase4_deterministic_replay.py::test_deterministic_fracture_order PASSED [ 54%]
+tests/network/test_phase4_deterministic_replay.py::test_per_edge_stats_reproducibility PASSED [ 54%]
+tests/network/test_phase4_export_consistency.py::test_csv_json_aggregate_consistency PASSED [ 55%]
+tests/network/test_phase4_export_consistency.py::test_fractured_history_csv_segment_consistency PASSED [ 55%]
+tests/network/test_phase4_export_consistency.py::test_no_nan_inf_in_exports PASSED [ 56%]
+tests/network/test_phase4_export_consistency.py::test_csv_null_handling PASSED [ 57%]
+tests/network/test_phase4_failure_modes.py::test_zero_tension_network PASSED [ 57%]
+tests/network/test_phase4_failure_modes.py::test_fully_slack_initial_state PASSED [ 58%]
+tests/network/test_phase4_failure_modes.py::test_single_edge_network PASSED [ 59%]
+tests/network/test_phase4_failure_modes.py::test_immediate_percolation_failure PASSED [ 59%]
+tests/network/test_phase4_failure_modes.py::test_extremely_low_plasmin_supply PASSED [ 60%]
+tests/network/test_phase4_failure_modes.py::test_extremely_high_plasmin_supply PASSED [ 60%]
+tests/network/test_phase4_failure_modes.py::test_no_crash_on_extreme_parameters PASSED [ 61%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestVisualizationPlasminSites::test_plasmin_site_rendering_enabled PASSED [ 62%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestVisualizationPlasminSites::test_plasmin_site_rendering_disabled_legacy PASSED [ 62%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestVisualizationPlasminSites::test_plasmin_site_color_by_damage PASSED [ 63%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestVisualizationPlasminSites::test_plasmin_site_position_interpolation PASSED [ 63%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestVisualizationPlasminSites::test_plasmin_site_clamping PASSED [ 64%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestRegressionLegacyBehavior::test_legacy_mode_no_plasmin_visualization PASSED [ 65%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestRegressionLegacyBehavior::test_legacy_mode_edge_rendering_unchanged PASSED [ 65%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestRegressionLegacyBehavior::test_legacy_mode_no_extra_objects_drawn PASSED [ 66%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestDeterministicReplay::test_spatial_rendering_deterministic PASSED [ 67%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestDeterministicReplay::test_site_ordering_deterministic PASSED [ 67%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestDeterministicReplay::test_damage_color_deterministic PASSED [ 68%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestEdgeCasesVisualization::test_no_plasmin_sites PASSED [ 68%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestEdgeCasesVisualization::test_single_plasmin_site PASSED [ 69%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestEdgeCasesVisualization::test_multiple_plasmin_sites PASSED [ 70%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestEdgeCasesVisualization::test_malformed_site_graceful_fallback PASSED [ 70%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestEdgeCasesVisualization::test_missing_plasmin_sites_attribute PASSED [ 71%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestEdgeCasesVisualization::test_empty_node_coordinates PASSED [ 72%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestBackwardCompatibility::test_legacy_edges_unchanged PASSED [ 72%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestBackwardCompatibility::test_visualization_code_path_independence PASSED [ 73%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestBackwardCompatibility::test_csv_export_unchanged_legacy PASSED [ 73%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestBackwardCompatibility::test_json_export_unchanged_legacy PASSED [ 74%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestPerformanceSanity::test_rendering_overhead_acceptable PASSED [ 75%]
+tests/network/test_phase4_phase5_visualization_validation.py::TestPerformanceSanity::test_memory_usage_stable PASSED [ 75%]
+tests/network/test_phase4_scientific_invariants.py::test_plasmin_conservation PASSED [ 76%]
+tests/network/test_phase4_scientific_invariants.py::test_segment_bounds PASSED [ 77%]
+tests/network/test_phase4_scientific_invariants.py::test_edge_stiffness_bounds PASSED [ 77%]
+tests/network/test_phase4_scientific_invariants.py::test_edge_removal_criterion PASSED [ 78%]
+tests/network/test_phase4_scientific_invariants.py::test_termination_criterion PASSED [ 78%]
+tests/network/test_phase4_scientific_invariants.py::test_no_negative_observables PASSED [ 79%]
+tests/network/test_relaxed_network_physics.py::test_component_decomposition PASSED [ 80%]
+tests/network/test_relaxed_network_physics.py::test_relaxation_physics PASSED [ 80%]
+tests/network/test_relaxed_network_physics.py::test_validation_function PASSED [ 81%]
+tests/network/test_spatial_plasmin_binding.py::test_binding_monotonic_increase FAILED [ 81%]
+tests/network/test_spatial_plasmin_binding.py::test_binding_clamp FAILED [ 82%]
+tests/network/test_spatial_plasmin_binding.py::test_tension_effect FAILED [ 83%]
+tests/network/test_spatial_plasmin_binding.py::test_dt_used_equals_base_dt_when_no_cleavage FAILED [ 83%]
+tests/network/test_spatial_plasmin_binding.py::test_legacy_mode_unchanged PASSED [ 84%]
+tests/network/test_spatial_plasmin_cleavage.py::test_cleavage_decreases_n_i FAILED [ 85%]
+tests/network/test_spatial_plasmin_cleavage.py::test_no_cleavage_when_no_binding FAILED [ 85%]
+tests/network/test_spatial_plasmin_cleavage.py::test_dt_cleave_stability FAILED [ 86%]
+tests/network/test_spatial_plasmin_cleavage.py::test_phase_separation_guards FAILED [ 86%]
+tests/network/test_spatial_plasmin_init.py::test_spatial_init_legacy_mode PASSED [ 87%]
+tests/network/test_spatial_plasmin_init.py::test_spatial_init_with_params FAILED [ 88%]
+tests/network/test_spatial_plasmin_init.py::test_spatial_missing_params PASSED [ 88%]
+tests/network/test_spatial_plasmin_phase2f.py::test_no_ruptured_keys_in_spatial_mode FAILED [ 89%]
+tests/network/test_spatial_plasmin_phase2f.py::test_sigma_ref_slack_does_not_terminate FAILED [ 90%]
+tests/network/test_spatial_plasmin_phase2f.py::test_no_division_by_zero_in_spatial_mode FAILED [ 90%]
+tests/network/test_spatial_plasmin_phase2f.py::test_segments_preserved_after_batch FAILED [ 91%]
+tests/network/test_spatial_plasmin_seeding.py::test_sparsity FAILED      [ 91%]
+tests/network/test_spatial_plasmin_seeding.py::test_conservation FAILED  [ 92%]
+tests/network/test_spatial_plasmin_seeding.py::test_determinism FAILED   [ 93%]
+tests/network/test_spatial_plasmin_seeding.py::test_legacy_unchanged PASSED [ 93%]
+tests/network/test_spatial_plasmin_stiffness.py::test_stiffness_fraction_computed PASSED [ 94%]
+tests/network/test_spatial_plasmin_stiffness.py::test_S_updated_after_cleavage PASSED [ 95%]
+tests/network/test_spatial_plasmin_stiffness.py::test_mechanics_receives_k_eff PASSED [ 95%]
+tests/network/test_spatial_plasmin_stiffness.py::test_observables_logged PASSED [ 96%]
+tests/network/test_spatial_plasmin_stiffness.py::test_legacy_mode_unchanged PASSED [ 96%]
+tests/network/test_spatial_plasmin_units.py::test_unit_conversion_micrometers FAILED [ 97%]
+tests/network/test_spatial_plasmin_units.py::test_segment_explosion_guard PASSED [ 98%]
+tests/network/test_spatial_plasmin_units.py::test_last_segment_length FAILED [ 98%]
+tests/network/test_spatial_plasmin_units.py::test_meta_key_normalization FAILED [ 99%]
+tests/network/test_spatial_plasmin_units.py::test_default_unit_factors FAILED [100%]
+
+================================== FAILURES ===================================
+______________________ test_binding_kinetics_integration ______________________
+tests\network\test_binding_integration.py:85: in test_binding_kinetics_integration
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== Integration Test: Binding Kinetics Execution ===
+_________________________ test_legacy_mode_is_default _________________________
+tests\network\test_phase0_feature_flags.py:130: in test_legacy_mode_is_default
+    assert FeatureFlags.SPATIAL_PLASMIN_CRITICAL_DAMAGE == 0.7
+E   AssertionError: assert 0.5 == 0.7
+E    +  where 0.5 = <class 'src.config.feature_flags.FeatureFlags'>.SPATIAL_PLASMIN_CRITICAL_DAMAGE
+____ TestPhase1EdgeSnapshotBackwardCompat.test_legacy_is_ruptured_checks_S ____
+tests\network\test_phase1_data_models.py:219: in test_legacy_is_ruptured_checks_S
+    assert not edge_intact.is_ruptured
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'Phase1EdgeSnapshot' object has no attribute 'is_ruptured'
+_ TestPhase1EdgeSnapshotSpatialMode.test_spatial_S_effective_computed_from_damage _
+tests\network\test_phase1_data_models.py:260: in test_spatial_S_effective_computed_from_damage
+    assert edge.S_effective == 0.7
+E   assert 999.0 == 0.7
+E    +  where 999.0 = Phase1EdgeSnapshot(edge_id=10, n_from=1, n_to=2, k0=1.0, original_rest_length=1.0, L_rest_effective=1.0, M=0.0, S=999.0, thickness=1.0, lysis_batch_index=None, lysis_time=None, plasmin_sites=(PlasminBindingSite(site_id=1, edge_id=10, position_parametric=0.5, position_world_x=5.0, position_world_y=3.0, damage_depth=0.3, binding_batch_index=0, binding_time=0.0, rng_seed_for_position=42),), segments=None).S_effective
+_ TestPhase1EdgeSnapshotSpatialMode.test_spatial_is_ruptured_checks_critical_damage _
+tests\network\test_phase1_data_models.py:279: in test_spatial_is_ruptured_checks_critical_damage
+    assert not edge_intact.is_ruptured  # 0.6 < 0.7 critical
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'Phase1EdgeSnapshot' object has no attribute 'is_ruptured'
+______ TestPlasminManagerStateless.test_manager_has_no_persistent_state _______
+tests\network\test_phase2_plasmin_manager.py:64: in test_manager_has_no_persistent_state
+    assert len(private_attrs) == 0, f"Manager should be stateless, but found: {private_attrs}"
+E   AssertionError: Manager should be stateless, but found: ['_create_binding_site', '_create_binding_sites_for_edge']
+E   assert 2 == 0
+E    +  where 2 = len(['_create_binding_site', '_create_binding_sites_for_edge'])
+___ TestPlasminManagerDeterminism.test_initialize_edge_deterministic_output ___
+tests\network\test_phase2_plasmin_manager.py:90: in test_initialize_edge_deterministic_output
+    result1 = PlasminManager.initialize_edge(edge1, batch_index=0, rng_seed=12345)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\managers\plasmin_manager.py:146: in initialize_edge
+    site = PlasminManager._create_binding_site(
+src\managers\plasmin_manager.py:451: in _create_binding_site
+    rng_for_site = np.random.RandomState(site_seed)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+numpy\\random\\mtrand.pyx:186: in numpy.random.mtrand.RandomState.__init__
+    ???
+_mt19937.pyx:168: in numpy.random._mt19937.MT19937._legacy_seeding
+    ???
+_mt19937.pyx:182: in numpy.random._mt19937.MT19937._legacy_seeding
+    ???
+E   ValueError: Seed must be between 0 and 2**32 - 1
+_ TestPlasminManagerDeterminism.test_select_binding_targets_deterministic_selection _
+tests\network\test_phase2_plasmin_manager.py:141: in test_select_binding_targets_deterministic_selection
+    result1 = PlasminManager.select_binding_targets(
+src\managers\plasmin_manager.py:409: in select_binding_targets
+    selected[selected_edge_id] = PlasminManager._create_binding_sites_for_edge(
+src\managers\plasmin_manager.py:493: in _create_binding_sites_for_edge
+    site = PlasminManager._create_binding_site(
+src\managers\plasmin_manager.py:451: in _create_binding_site
+    rng_for_site = np.random.RandomState(site_seed)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+numpy\\random\\mtrand.pyx:186: in numpy.random.mtrand.RandomState.__init__
+    ???
+_mt19937.pyx:168: in numpy.random._mt19937.MT19937._legacy_seeding
+    ???
+_mt19937.pyx:182: in numpy.random._mt19937.MT19937._legacy_seeding
+    ???
+E   ValueError: Seed must be between 0 and 2**32 - 1
+____ TestPlasminManagerImmutability.test_initialize_edge_no_input_mutation ____
+tests\network\test_phase2_plasmin_manager.py:178: in test_initialize_edge_no_input_mutation
+    PlasminManager.initialize_edge(edge, batch_index=0, rng_seed=999)
+src\managers\plasmin_manager.py:146: in initialize_edge
+    site = PlasminManager._create_binding_site(
+src\managers\plasmin_manager.py:451: in _create_binding_site
+    rng_for_site = np.random.RandomState(site_seed)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+numpy\\random\\mtrand.pyx:186: in numpy.random.mtrand.RandomState.__init__
+    ???
+_mt19937.pyx:168: in numpy.random._mt19937.MT19937._legacy_seeding
+    ???
+_mt19937.pyx:182: in numpy.random._mt19937.MT19937._legacy_seeding
+    ???
+E   ValueError: Seed must be between 0 and 2**32 - 1
+________ TestPlasminManagerEdgeCases.test_initialize_edge_empty_sites _________
+tests\network\test_phase2_plasmin_manager.py:412: in test_initialize_edge_empty_sites
+    result = PlasminManager.initialize_edge(edge, batch_index=0, rng_seed=999)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\managers\plasmin_manager.py:146: in initialize_edge
+    site = PlasminManager._create_binding_site(
+src\managers\plasmin_manager.py:451: in _create_binding_site
+    rng_for_site = np.random.RandomState(site_seed)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+numpy\\random\\mtrand.pyx:186: in numpy.random.mtrand.RandomState.__init__
+    ???
+_mt19937.pyx:168: in numpy.random._mt19937.MT19937._legacy_seeding
+    ???
+_mt19937.pyx:182: in numpy.random._mt19937.MT19937._legacy_seeding
+    ???
+E   ValueError: Seed must be between 0 and 2**32 - 1
+____ TestEdgeEvolutionEngineStateless.test_engine_has_no_persistent_state _____
+tests\network\test_phase3_edge_evolution_engine.py:59: in test_engine_has_no_persistent_state
+    assert len(private_attrs) == 0, f"Engine should be stateless, but found: {private_attrs}"
+E   AssertionError: Engine should be stateless, but found: ['_copy_edge_with_updates', '_evolve_edges_legacy', '_evolve_edges_spatial']
+E   assert 3 == 0
+E    +  where 3 = len(['_copy_edge_with_updates', '_evolve_edges_legacy', '_evolve_edges_spatial'])
+__ TestEdgeEvolutionEngineDeterminism.test_evolve_edges_deterministic_legacy __
+tests\network\test_phase3_edge_evolution_engine.py:91: in test_evolve_edges_deterministic_legacy
+    result1 = EdgeEvolutionEngine.evolve_edges(
+src\managers\edge_evolution_engine.py:231: in evolve_edges
+    return EdgeEvolutionEngine._evolve_edges_legacy(
+src\managers\edge_evolution_engine.py:345: in _evolve_edges_legacy
+    e_gate = 1.0 if E_i <= Gc else (1.0 + fracture_eta * (E_i - Gc))
+                           ^^
+E   NameError: name 'Gc' is not defined
+____ TestEdgeEvolutionEngineLegacyBypass.test_legacy_path_produces_results ____
+tests\network\test_phase3_edge_evolution_engine.py:173: in test_legacy_path_produces_results
+    result = EdgeEvolutionEngine.evolve_edges(
+src\managers\edge_evolution_engine.py:231: in evolve_edges
+    return EdgeEvolutionEngine._evolve_edges_legacy(
+src\managers\edge_evolution_engine.py:345: in _evolve_edges_legacy
+    e_gate = 1.0 if E_i <= Gc else (1.0 + fracture_eta * (E_i - Gc))
+                           ^^
+E   NameError: name 'Gc' is not defined
+____ TestEdgeEvolutionEngineSpatialPath.test_spatial_path_produces_results ____
+tests\network\test_phase3_edge_evolution_engine.py:224: in test_spatial_path_produces_results
+    result = EdgeEvolutionEngine.evolve_edges(
+src\managers\edge_evolution_engine.py:197: in evolve_edges
+    return EdgeEvolutionEngine._evolve_edges_spatial(
+src\managers\edge_evolution_engine.py:477: in _evolve_edges_spatial
+    binding_targets = PlasminManager.select_binding_targets(
+src\managers\plasmin_manager.py:409: in select_binding_targets
+    selected[selected_edge_id] = PlasminManager._create_binding_sites_for_edge(
+src\managers\plasmin_manager.py:493: in _create_binding_sites_for_edge
+    site = PlasminManager._create_binding_site(
+src\managers\plasmin_manager.py:451: in _create_binding_site
+    rng_for_site = np.random.RandomState(site_seed)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+numpy\\random\\mtrand.pyx:186: in numpy.random.mtrand.RandomState.__init__
+    ???
+_mt19937.pyx:168: in numpy.random._mt19937.MT19937._legacy_seeding
+    ???
+_mt19937.pyx:182: in numpy.random._mt19937.MT19937._legacy_seeding
+    ???
+E   ValueError: Seed must be between 0 and 2**32 - 1
+___ TestEdgeEvolutionEngineImmutability.test_evolve_edges_no_input_mutation ___
+tests\network\test_phase3_edge_evolution_engine.py:280: in test_evolve_edges_no_input_mutation
+    EdgeEvolutionEngine.evolve_edges(
+src\managers\edge_evolution_engine.py:231: in evolve_edges
+    return EdgeEvolutionEngine._evolve_edges_legacy(
+src\managers\edge_evolution_engine.py:345: in _evolve_edges_legacy
+    e_gate = 1.0 if E_i <= Gc else (1.0 + fracture_eta * (E_i - Gc))
+                           ^^
+E   NameError: name 'Gc' is not defined
+___ TestEdgeEvolutionEngineImmutability.test_evolve_edges_returns_new_edges ___
+tests\network\test_phase3_edge_evolution_engine.py:325: in test_evolve_edges_returns_new_edges
+    result = EdgeEvolutionEngine.evolve_edges(
+src\managers\edge_evolution_engine.py:231: in evolve_edges
+    return EdgeEvolutionEngine._evolve_edges_legacy(
+src\managers\edge_evolution_engine.py:345: in _evolve_edges_legacy
+    e_gate = 1.0 if E_i <= Gc else (1.0 + fracture_eta * (E_i - Gc))
+                           ^^
+E   NameError: name 'Gc' is not defined
+_____________________ test_deterministic_replay_executed ______________________
+tests\network\test_phase4_1_executed_validation.py:197: in test_deterministic_replay_executed
+    log1, hist1, term1 = _run_simulation(csv_path, num_batches=5, rng_seed=12345)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\network\test_phase4_1_executed_validation.py:129: in _run_simulation
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+======================================================================
+EXECUTED TEST: Deterministic Replay
+======================================================================
+  Running simulation #1...
+____________________ test_percolation_termination_executed ____________________
+tests\network\test_phase4_1_executed_validation.py:277: in test_percolation_termination_executed
+    log, hist, term_reason = _run_simulation(csv_path, num_batches=500, rng_seed=99999)  # More batches for moderate rates
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\network\test_phase4_1_executed_validation.py:129: in _run_simulation
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+======================================================================
+EXECUTED TEST: Percolation Termination
+======================================================================
+  Running simulation until termination...
+______________________ test_export_consistency_executed _______________________
+tests\network\test_phase4_1_executed_validation.py:341: in test_export_consistency_executed
+    log, hist, term_reason = _run_simulation(csv_path, num_batches=5, rng_seed=54321)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\network\test_phase4_1_executed_validation.py:129: in _run_simulation
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+======================================================================
+EXECUTED TEST: Export Consistency
+======================================================================
+  Running simulation...
+_____________________ test_scientific_invariants_executed _____________________
+tests\network\test_phase4_1_executed_validation.py:433: in test_scientific_invariants_executed
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+======================================================================
+EXECUTED TEST: Scientific Invariants
+======================================================================
+_______________________ test_binding_monotonic_increase _______________________
+tests\network\test_spatial_plasmin_binding.py:123: in test_binding_monotonic_increase
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST: Stochastic Binding Accumulates (No Unbinding) ===
+_____________________________ test_binding_clamp ______________________________
+tests\network\test_spatial_plasmin_binding.py:202: in test_binding_clamp
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST: Clamp + Conservation ===
+_____________________________ test_tension_effect _____________________________
+tests\network\test_spatial_plasmin_binding.py:272: in test_tension_effect
+    controller_low.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST: Tension Effect on Unbinding (alpha > 0) ===
+________________ test_dt_used_equals_base_dt_when_no_cleavage _________________
+tests\network\test_spatial_plasmin_binding.py:359: in test_dt_used_equals_base_dt_when_no_cleavage
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST: dt_used == base dt when k_cat0=0 ===
+_________________________ test_cleavage_decreases_n_i _________________________
+tests\network\test_spatial_plasmin_cleavage.py:90: in test_cleavage_decreases_n_i
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST A: Cleavage Decreases n_i ===
+______________________ test_no_cleavage_when_no_binding _______________________
+tests\network\test_spatial_plasmin_cleavage.py:203: in test_no_cleavage_when_no_binding
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST B: No Cleavage When B_i=0 ===
+__________________________ test_dt_cleave_stability ___________________________
+tests\network\test_spatial_plasmin_cleavage.py:299: in test_dt_cleave_stability
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST C: dt_cleave Stability Triggers ===
+________________________ test_phase_separation_guards _________________________
+tests\network\test_spatial_plasmin_cleavage.py:382: in test_phase_separation_guards
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST D: Phase Separation Guards ===
+________________________ test_spatial_init_with_params ________________________
+tests\network\test_spatial_plasmin_init.py:67: in test_spatial_init_with_params
+    c.load_network(temp_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+____________________ test_no_ruptured_keys_in_spatial_mode ____________________
+tests\network\test_spatial_plasmin_phase2f.py:68: in test_no_ruptured_keys_in_spatial_mode
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST 1: No 'ruptured' keys in spatial mode logs ===
+___________________ test_sigma_ref_slack_does_not_terminate ___________________
+tests\network\test_spatial_plasmin_phase2f.py:146: in test_sigma_ref_slack_does_not_terminate
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST 2: sigma_ref slack does not terminate spatial mode ===
+__________________ test_no_division_by_zero_in_spatial_mode ___________________
+tests\network\test_spatial_plasmin_phase2f.py:225: in test_no_division_by_zero_in_spatial_mode
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST 3: No division by zero in spatial mode ===
+_____________________ test_segments_preserved_after_batch _____________________
+tests\network\test_spatial_plasmin_phase2f.py:303: in test_segments_preserved_after_batch
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST 4: Segments preserved after batch ===
+________________________________ test_sparsity ________________________________
+tests\network\test_spatial_plasmin_seeding.py:88: in test_sparsity
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST A: Sparsity Test ===
+______________________________ test_conservation ______________________________
+tests\network\test_spatial_plasmin_seeding.py:150: in test_conservation
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST B: Conservation Test ===
+______________________________ test_determinism _______________________________
+tests\network\test_spatial_plasmin_seeding.py:242: in test_determinism
+    results1 = run_simulation(csv_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+tests\network\test_spatial_plasmin_seeding.py:207: in run_simulation
+    controller.load_network(csv_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+---------------------------- Captured stdout call -----------------------------
+
+=== TEST C: Determinism Test ===
+______________________ test_unit_conversion_micrometers _______________________
+tests\network\test_spatial_plasmin_units.py:47: in test_unit_conversion_micrometers
+    c.load_network(temp_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+__________________________ test_last_segment_length ___________________________
+tests\network\test_spatial_plasmin_units.py:158: in test_last_segment_length
+    c.load_network(temp_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+_________________________ test_meta_key_normalization _________________________
+tests\network\test_spatial_plasmin_units.py:216: in test_meta_key_normalization
+    c.load_network(temp_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+__________________________ test_default_unit_factors __________________________
+tests\network\test_spatial_plasmin_units.py:280: in test_default_unit_factors
+    c.load_network(temp_path)
+src\views\tkinter_view\research_simulation_page.py:3549: in load_network
+    adapter.relax(float(self.state.strain_value))
+src\views\tkinter_view\research_simulation_page.py:2703: in relax
+    forces_intact = list(self._relax_with_keff(k_eff_intact, float(strain)))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2779: in _relax_with_keff
+    return self._relax_impl(self._edges, k_eff_intact, strain)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\views\tkinter_view\research_simulation_page.py:2458: in relax_impl
+    raise ValueError("Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.")
+E   ValueError: Solver input reconciliation failed: could not map k_eff_intact onto edge snapshots deterministically.
+============================== warnings summary ===============================
+tests/network/test_relaxed_network_physics.py::test_component_decomposition
+  C:\Users\manda\AppData\Local\Programs\Python\Python312\Lib\site-packages\_pytest\python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/network/test_relaxed_network_physics.py::test_component_decomposition returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/network/test_relaxed_network_physics.py::test_relaxation_physics
+  C:\Users\manda\AppData\Local\Programs\Python\Python312\Lib\site-packages\_pytest\python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/network/test_relaxed_network_physics.py::test_relaxation_physics returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/network/test_relaxed_network_physics.py::test_validation_function
+  C:\Users\manda\AppData\Local\Programs\Python\Python312\Lib\site-packages\_pytest\python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/network/test_relaxed_network_physics.py::test_validation_function returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/network/test_binding_integration.py::test_binding_kinetics_integration
+FAILED tests/network/test_phase0_feature_flags.py::test_legacy_mode_is_default
+FAILED tests/network/test_phase1_data_models.py::TestPhase1EdgeSnapshotBackwardCompat::test_legacy_is_ruptured_checks_S
+FAILED tests/network/test_phase1_data_models.py::TestPhase1EdgeSnapshotSpatialMode::test_spatial_S_effective_computed_from_damage
+FAILED tests/network/test_phase1_data_models.py::TestPhase1EdgeSnapshotSpatialMode::test_spatial_is_ruptured_checks_critical_damage
+FAILED tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerStateless::test_manager_has_no_persistent_state
+FAILED tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerDeterminism::test_initialize_edge_deterministic_output
+FAILED tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerDeterminism::test_select_binding_targets_deterministic_selection
+FAILED tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerImmutability::test_initialize_edge_no_input_mutation
+FAILED tests/network/test_phase2_plasmin_manager.py::TestPlasminManagerEdgeCases::test_initialize_edge_empty_sites
+FAILED tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineStateless::test_engine_has_no_persistent_state
+FAILED tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineDeterminism::test_evolve_edges_deterministic_legacy
+FAILED tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineLegacyBypass::test_legacy_path_produces_results
+FAILED tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineSpatialPath::test_spatial_path_produces_results
+FAILED tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineImmutability::test_evolve_edges_no_input_mutation
+FAILED tests/network/test_phase3_edge_evolution_engine.py::TestEdgeEvolutionEngineImmutability::test_evolve_edges_returns_new_edges
+FAILED tests/network/test_phase4_1_executed_validation.py::test_deterministic_replay_executed
+FAILED tests/network/test_phase4_1_executed_validation.py::test_percolation_termination_executed
+FAILED tests/network/test_phase4_1_executed_validation.py::test_export_consistency_executed
+FAILED tests/network/test_phase4_1_executed_validation.py::test_scientific_invariants_executed
+FAILED tests/network/test_spatial_plasmin_binding.py::test_binding_monotonic_increase
+FAILED tests/network/test_spatial_plasmin_binding.py::test_binding_clamp - Va...
+FAILED tests/network/test_spatial_plasmin_binding.py::test_tension_effect - V...
+FAILED tests/network/test_spatial_plasmin_binding.py::test_dt_used_equals_base_dt_when_no_cleavage
+FAILED tests/network/test_spatial_plasmin_cleavage.py::test_cleavage_decreases_n_i
+FAILED tests/network/test_spatial_plasmin_cleavage.py::test_no_cleavage_when_no_binding
+FAILED tests/network/test_spatial_plasmin_cleavage.py::test_dt_cleave_stability
+FAILED tests/network/test_spatial_plasmin_cleavage.py::test_phase_separation_guards
+FAILED tests/network/test_spatial_plasmin_init.py::test_spatial_init_with_params
+FAILED tests/network/test_spatial_plasmin_phase2f.py::test_no_ruptured_keys_in_spatial_mode
+FAILED tests/network/test_spatial_plasmin_phase2f.py::test_sigma_ref_slack_does_not_terminate
+FAILED tests/network/test_spatial_plasmin_phase2f.py::test_no_division_by_zero_in_spatial_mode
+FAILED tests/network/test_spatial_plasmin_phase2f.py::test_segments_preserved_after_batch
+FAILED tests/network/test_spatial_plasmin_seeding.py::test_sparsity - ValueEr...
+FAILED tests/network/test_spatial_plasmin_seeding.py::test_conservation - Val...
+FAILED tests/network/test_spatial_plasmin_seeding.py::test_determinism - Valu...
+FAILED tests/network/test_spatial_plasmin_units.py::test_unit_conversion_micrometers
+FAILED tests/network/test_spatial_plasmin_units.py::test_last_segment_length
+FAILED tests/network/test_spatial_plasmin_units.py::test_meta_key_normalization
+FAILED tests/network/test_spatial_plasmin_units.py::test_default_unit_factors
+================= 40 failed, 121 passed, 3 warnings in 12.17s =================

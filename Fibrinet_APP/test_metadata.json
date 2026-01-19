@@ -1,0 +1,60 @@
+{
+  "physics_engine": "FibriNet Core V2",
+  "version": "2026-01-02",
+  "author": "Claude Sonnet 4.5 (Senior Computational Biophysicist)",
+  "integrator": "L-BFGS-B (Analytical Jacobian)",
+  "complexity": "O(N_fibers + N_nodes) per timestep",
+  "vectorization": "NumPy (no Python loops)",
+  "force_model": "WLC (Marko-Siggia) + Exact Energy Integral",
+  "force_equation": "F(\u03b5) = (k_B T / \u03be) \u00d7 [1/(4(1-\u03b5)\u00b2) - 1/4 + \u03b5]",
+  "energy_equation": "U(\u03b5) = (k_B T L_c / \u03be) \u00d7 [1/(4(1-\u03b5)) - 1/4 - \u03b5/4 + \u03b5\u00b2/2]",
+  "energy_force_consistency": "Verified: |F - dU/dx|/F < 1e-6",
+  "rupture_model": "Stress-based Bell Model (CORRECTED)",
+  "rupture_equation": "k(F,S) = k\u2080 \u00d7 exp((F/max(S,S_floor)) \u00d7 x_b / k_B T)",
+  "rupture_rationale": "Uses stress (F/S) instead of force (F) for physical correctness",
+  "chemistry_algorithm": "Hybrid SSA + tau-leaping",
+  "chemistry_switching": "Auto-select based on total propensity",
+  "guards": {
+    "S_MIN_BELL": 0.05,
+    "MAX_STRAIN": 0.99,
+    "MAX_BELL_EXPONENT": 100.0,
+    "rationale": "Clamps prevent numerical overflow while preserving physics in accessible regime"
+  },
+  "assumptions": [
+    "Quasi-static mechanical equilibrium (relaxation >> chemistry timescale)",
+    "Uniform enzyme distribution (mean-field, fast diffusion limit)",
+    "Affine boundary stretching (probes global constitutive response)",
+    "Cross-section scaling: F_eff = S \u00d7 F_wlc (independent fiber approximation)",
+    "Isothermal conditions (T = 310.15 K = 37\u00b0C physiological)"
+  ],
+  "physical_constants": {
+    "k_B": 1.380649e-23,
+    "T": 310.15,
+    "k_B_T": 4.2820828735e-21,
+    "xi": 1e-06,
+    "x_bell": 5e-10,
+    "k_cat_0": 0.1
+  },
+  "parameters": {
+    "lambda_0": 1.0,
+    "dt": 0.01,
+    "max_time": 100.0,
+    "applied_strain": 0.1,
+    "coord_to_m": 1e-06,
+    "thickness_to_m": 1e-06,
+    "delta_S": null
+  },
+  "network": {
+    "n_nodes": 0,
+    "n_fibers": 0,
+    "n_left_boundary": 0,
+    "n_right_boundary": 0
+  },
+  "rng_seed": 0,
+  "deterministic": true,
+  "validation": {
+    "energy_force_consistency": "PASS",
+    "stress_based_bell": "PASS",
+    "energy_minimization": "PASS"
+  }
+}

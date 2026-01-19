@@ -1,88 +1,85 @@
 # FibriNet
 
-Model and analyze fibrin-like networks under tension. Includes a Tkinter GUI with a **Research Simulation Tool** for mechanochemical fibrinolysis studies, plus a CLI for constrained collapse analysis.
+Simulation tools for studying fibrin mechanics.
 
-## Features
+## Components
 
-### Research Simulation Tool (New)
-Stochastic mechanochemical simulation engine for studying plasmin-mediated fibrinolysis under mechanical strain:
-- **Worm-Like Chain (WLC) mechanics** using Marko-Siggia approximation
-- **Strain-inhibited enzymatic cleavage** - stretched fibers resist degradation
-- **Hybrid stochastic chemistry** (Gillespie SSA + tau-leaping)
-- **Real-time visualization** of network degradation
-- **Strain sweep experiments** to measure T50 clearance times
+### Fibrin Network Simulator
 
-### Collapse Analyzer (CLI)
-Physics-based network collapse analysis with stepwise outputs.
+GUI and CLI tools for modeling fibrin-like networks under tension.
 
----
+- Worm-Like Chain (WLC) mechanics using Marko-Siggia approximation
+- Strain-inhibited enzymatic cleavage
+- Stochastic chemistry (Gillespie SSA + tau-leaping)
+- Network visualization
+- Collapse analysis with stepwise iteration
 
-## Quick Start
+**Run:**
+```bash
+# GUI
+python FibriNet.py
 
-**Requirements:** Python 3.10+
+# CLI
+python scripts/cli/cli_main.py
+
+# Collapse analyzer
+python scripts/cli/analyze_collapse_cli.py <path-to-xlsx> --constrain-center --iterate --out-dir exports/
+```
+
+### Single Fiber Simulator
+
+CLI-first simulator for individual fibrin fibers with enzyme coupling.
+
+- Hookean and WLC force laws
+- Overdamped dynamics
+- Multiple enzyme hazard models
+- Interactive visualization (DearPyGui)
+- Parameter sweeps with reproducible seeds
+
+**Run:**
+```bash
+# GUI
+python -m projects.single_fiber.src.single_fiber.gui.app
+
+# CLI
+python -m projects.single_fiber.src.single_fiber.cli -c <config.yaml> -o <output_dir>
+```
+
+## Installation
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Run GUI (includes Research Simulation)
+Requires Python 3.10+.
 
-```bash
-python Fibrinet_APP/FibriNet.py
-```
+## Documentation
 
-### Run Collapse Analyzer (CLI)
+- [Overview](docs/overview.md)
+- [Installation](docs/installation.md)
+- [CLI Usage](docs/usage_cli.md)
+- [Collapse Analyzer](docs/collapse_analyzer.md)
+- [Single Fiber Guide](docs/single_fiber/usage.md)
+- [Testing Guide](docs/TESTING_GUIDE.md)
+- [Formula Reference](docs/QUICK_REFERENCE_FORMULA_SHEET.md)
 
-```bash
-python Fibrinet_APP/analyze_collapse_cli.py <path-to-xlsx> --constrain-center --iterate --out-dir Fibrinet_APP/exports
-```
+See [docs/](docs/) for full documentation.
 
-Optional: `--max-steps N` to limit iterations
+## Input Format
 
----
-
-## Input Format (.xlsx)
-
-Single sheet with three tables separated by a blank row:
+Network input files use Excel format (.xlsx) with three tables separated by blank rows:
 
 1. **Nodes:** `n_id`, `n_x`, `n_y`
 2. **Edges:** `e_id`, `n_from`, `n_to`
 3. **Meta:** `meta_key`, `meta_value` (must include `spring_stiffness_constant`)
 
-See examples in `Fibrinet_APP/test/input_data/`.
+Example files are in `test/input_data/`.
 
----
+## Testing
 
-## Research Simulation Parameters
-
-| Parameter | Description | Typical Range |
-|-----------|-------------|---------------|
-| Applied Strain | Network deformation | 0.0 - 0.5 |
-| Plasmin Concentration | Enzyme density | 10 - 1000 nM |
-| Cleavage Rate (k₀) | Base enzymatic rate | 0.01 - 1.0 s⁻¹ |
-| Strain Sensitivity (β) | Mechanochemical coupling | 1.0 - 10.0 |
-
----
-
-## Outputs
-
-### Collapse Analyzer
-- `initial_flush_region.png`
-- `step_XXX.png` per removal
-- `iteration_log.csv` (step, removed_edge_id, cut_size, cumulative_removed, etc.)
-
-### Research Simulation
-- Real-time network visualization
-- Fiber integrity plots
-- Simulation metadata (JSON)
-
----
-
-## Documentation
-
-Detailed documentation: [Google Drive folder](https://drive.google.com/drive/folders/1m1AaeAPe9KY9N34YW82rtmFUuHDx3FuP?usp=drive_link)
-
----
+```bash
+pytest test/ tests/ projects/single_fiber/tests/ -v
+```
 
 ## References
 
