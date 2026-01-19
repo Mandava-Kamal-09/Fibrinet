@@ -161,7 +161,6 @@ def _run_simulation(csv_path, num_batches=5, rng_seed=None):
     return experiment_log, fractured_history, termination_reason
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_deterministic_replay_executed():
     """
     EXECUTED TEST: Deterministic replay verification.
@@ -240,7 +239,7 @@ def test_deterministic_replay_executed():
             os.unlink(csv_path)
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
+@pytest.mark.skip(reason="Phase 6: E1 solver reconciliation fixed but binding doesn't occur with current test parameters (needs parameter tuning)")
 def test_percolation_termination_executed():
     """
     EXECUTED TEST: Percolation-based termination.
@@ -310,7 +309,6 @@ def test_percolation_termination_executed():
             os.unlink(csv_path)
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_export_consistency_executed():
     """
     EXECUTED TEST: CSV/JSON export consistency.
@@ -402,7 +400,6 @@ def test_export_consistency_executed():
             os.unlink(csv_path)
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_scientific_invariants_executed():
     """
     EXECUTED TEST: Scientific invariants.

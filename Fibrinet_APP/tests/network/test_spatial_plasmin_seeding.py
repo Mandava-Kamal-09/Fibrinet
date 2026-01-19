@@ -64,7 +64,6 @@ def create_test_network_csv(P_total_quanta=100, lambda_bind_total=10.0, num_edge
     return csv_path
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_sparsity():
     """
     Test A: Sparsity test - not all edges receive plasmin.
@@ -132,7 +131,6 @@ def test_sparsity():
         FeatureFlags.USE_SPATIAL_PLASMIN = original_flag
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_conservation():
     """
     Test B: Conservation test - P_free + sum(B_i) == P_total (exact).
@@ -189,7 +187,6 @@ def test_conservation():
         FeatureFlags.USE_SPATIAL_PLASMIN = original_flag
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_determinism():
     """
     Test C: Determinism test - same seed => identical results.

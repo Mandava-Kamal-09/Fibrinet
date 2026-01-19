@@ -19,7 +19,6 @@ import math
 import tempfile
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_unit_conversion_micrometers():
     """Test that coord_to_m and thickness_to_m convert units correctly."""
     FeatureFlags.USE_SPATIAL_PLASMIN = True
@@ -133,7 +132,6 @@ def test_segment_explosion_guard():
         FeatureFlags.USE_SPATIAL_PLASMIN = False
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_last_segment_length():
     """Test that last segment uses L_i < L_seg when L is not exact multiple."""
     FeatureFlags.USE_SPATIAL_PLASMIN = True
@@ -191,7 +189,6 @@ def test_last_segment_length():
         FeatureFlags.USE_SPATIAL_PLASMIN = False
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_meta_key_normalization():
     """Test that k_crit and K_crit are normalized correctly."""
     FeatureFlags.USE_SPATIAL_PLASMIN = True
@@ -258,7 +255,6 @@ def test_meta_key_normalization():
         FeatureFlags.USE_SPATIAL_PLASMIN = False
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_default_unit_factors():
     """Test that missing coord_to_m/thickness_to_m default to 1.0."""
     FeatureFlags.USE_SPATIAL_PLASMIN = True

@@ -38,7 +38,6 @@ def test_spatial_init_legacy_mode():
     print("[OK] Legacy mode test passed")
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_spatial_init_with_params():
     """Test spatial mode initialization with valid parameters."""
     FeatureFlags.USE_SPATIAL_PLASMIN = True

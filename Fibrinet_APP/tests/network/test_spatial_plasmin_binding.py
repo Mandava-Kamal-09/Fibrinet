@@ -84,7 +84,6 @@ def _create_minimal_spatial_network_csv(
         writer.writerow(["lambda_bind_total", str(lambda_bind_total)])
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_binding_monotonic_increase():
     """
     Test: Total bound increases (monotonic) when unbinding is disabled and supply exists.
@@ -167,7 +166,6 @@ def test_binding_monotonic_increase():
             os.unlink(csv_path)
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_binding_clamp():
     """
     Test: Clamp + conservation.
@@ -236,7 +234,6 @@ def test_binding_clamp():
             os.unlink(csv_path)
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_tension_effect():
     """
     Test: Tension reduces unbinding when alpha > 0 (k_off(T) decreases with tension).
@@ -326,7 +323,6 @@ def test_tension_effect():
             os.unlink(csv_path)
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_dt_used_equals_base_dt_when_no_cleavage():
     """
     Test: dt_used equals base dt when cleavage is disabled (k_cat0 = 0).
