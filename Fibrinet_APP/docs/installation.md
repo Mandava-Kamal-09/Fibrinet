@@ -37,13 +37,13 @@ python FibriNet.py
 ### Network Simulator (CLI)
 
 ```bash
-python cli_main.py
+python scripts/cli/cli_main.py
 ```
 
 ### Collapse Analyzer
 
 ```bash
-python analyze_collapse_cli.py <path-to-xlsx> --constrain-center --iterate --out-dir exports/
+python scripts/cli/analyze_collapse_cli.py <path-to-xlsx> --constrain-center --iterate --out-dir exports/
 ```
 
 ### Single Fiber Simulator

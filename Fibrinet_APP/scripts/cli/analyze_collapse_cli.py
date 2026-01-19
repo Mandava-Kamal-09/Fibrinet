@@ -1,5 +1,11 @@
 import sys
 import os
+
+# Add project root to path for imports
+_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
 from src.managers.network.collapse_analysis_manager import CollapseAnalysisManager
 
 
@@ -46,7 +52,7 @@ def main():
         base = os.path.splitext(os.path.basename(excel_path))[0]
         from datetime import datetime
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_dir = os.path.join(os.path.dirname(__file__), "exports", f"{base}_collapse_{ts}")
+        output_dir = os.path.join(_project_root, "exports", f"{base}_collapse_{ts}")
 
     try:
         manager = CollapseAnalysisManager()

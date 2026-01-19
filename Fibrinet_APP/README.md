@@ -20,10 +20,10 @@ GUI and CLI tools for modeling fibrin-like networks under tension.
 python FibriNet.py
 
 # CLI
-python cli_main.py
+python scripts/cli/cli_main.py
 
 # Collapse analyzer
-python analyze_collapse_cli.py <path-to-xlsx> --constrain-center --iterate --out-dir exports/
+python scripts/cli/analyze_collapse_cli.py <path-to-xlsx> --constrain-center --iterate --out-dir exports/
 ```
 
 ### Single Fiber Simulator
