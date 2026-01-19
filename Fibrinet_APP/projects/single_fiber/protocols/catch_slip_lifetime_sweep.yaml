@@ -1,0 +1,55 @@
+# Protocol: Catch-Slip Lifetime vs Force
+# =======================================
+# Explore biphasic lifetime behavior in catch-slip bonds.
+#
+# Purpose: Demonstrate catch-slip phenomenon where intermediate force
+# INCREASES bond lifetime (catch behavior) before high force decreases it
+# (slip behavior).
+#
+# Expected outputs:
+#   - sweeps/catch_slip_lifetime/sweep_summary.csv
+#   - sweeps/catch_slip_lifetime/runs/*.csv
+#
+# Run with:
+#   python -m projects.single_fiber.src.single_fiber.enzyme_models.sweep_runner \
+#       projects/single_fiber/protocols/catch_slip_lifetime_sweep.yaml
+
+base_config:
+  model:
+    law: hooke
+    hooke:
+      k_pN_per_nm: 0.05  # Softer spring to access wider force range
+      L0_nm: 20.0
+  geometry:
+    x1_nm: [0, 0, 0]
+    x2_nm: [100, 0, 0]
+  dynamics:
+    dt_us: 0.1
+    gamma_pN_us_per_nm: 1.0
+  loading:
+    # Different loading rates to probe different force regimes
+    v_nm_per_us: 0.2
+    t_end_us: 500.0
+
+hazard_model: catch_slip
+
+parameter_grid:
+  # Overall rate scale
+  lambda0: [0.01]
+  # Catch pathway (force-stabilizing)
+  A_c: [1.0, 2.0, 3.0]
+  beta_c: [0.3]  # Catch sensitivity
+  # Slip pathway (force-destabilizing)
+  A_s: [1.0]
+  beta_s: [0.15]  # Slip sensitivity
+
+n_replicates: 50
+base_seed: 99999
+output_dir: sweeps/catch_slip_lifetime
+
+description: |
+  Catch-slip bond lifetime sweep.
+  Varies A_c (catch pathway amplitude) to shift optimal force.
+  Higher A_c = stronger catch effect = longer lifetime at intermediate force.
+
+  Expected: Biphasic curve with minimum hazard rate at intermediate tension.

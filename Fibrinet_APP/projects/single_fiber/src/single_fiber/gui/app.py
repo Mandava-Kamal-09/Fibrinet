@@ -13,7 +13,10 @@ from pathlib import Path
 from ..config import SimulationConfig, load_config
 from .controller import ChainController, SimulationMode
 from .viewport import ChainViewport, ViewportConfig
-from .panels import StatusPanel, ControlPanel, ParameterPanel, EnzymePanel
+from .panels import (
+    StatusPanel, ControlPanel, ParameterPanel, EnzymePanel,
+    ModePanel, ModelScopePanel
+)
 
 
 class SingleFiberApp:
@@ -66,10 +69,16 @@ class SingleFiberApp:
             on_param_change=self._on_enzyme_param_change,
             on_enable_change=self._on_enzyme_enable_change
         )
+        self.mode_panel = ModePanel(
+            on_mode_change=self._on_mode_change,
+            on_preset_change=self._on_preset_change
+        )
+        self.scope_panel = ModelScopePanel()
 
         # Animation state
         self._is_running = False
         self._frame_count = 0
+        self._is_advanced_mode = False
 
     def run(self) -> None:
         """Run the application (blocking)."""
@@ -77,8 +86,8 @@ class SingleFiberApp:
         dpg.create_context()
         dpg.create_viewport(
             title=self.title,
-            width=1050,
-            height=850  # Taller to accommodate enzyme panel
+            width=1100,
+            height=950  # Taller to accommodate all panels
         )
 
         # Create UI
@@ -106,24 +115,28 @@ class SingleFiberApp:
 
     def _create_ui(self) -> None:
         """Create all UI elements."""
-        # Main viewport
-        self.viewport.create()
+        # Mode panel (top left) and Scope panel (top right)
+        self.mode_panel.create(pos=(10, 10), width=400)
+        self.scope_panel.create(pos=(420, 10), width=390)
+
+        # Main viewport (below mode/scope panels)
+        self.viewport.create(pos=(10, 160), width=800, height=500)
         self.viewport.set_callbacks(
             on_node_click=self._on_node_click,
             on_node_drag=self._on_node_drag,
             on_node_release=self._on_node_release
         )
 
-        # Panels
-        self.status_panel.create()
-        self.control_panel.create()
+        # Right-side panels
+        self.status_panel.create(pos=(820, 160), width=200)
+        self.control_panel.create(pos=(820, 420), width=200)
 
         # Parameter panel
         param_dict = self._get_param_dict()
-        self.param_panel.create(param_dict)
+        self.param_panel.create(param_dict, pos=(820, 610), width=200)
 
-        # Enzyme panel
-        self.enzyme_panel.create()
+        # Enzyme panel (bottom)
+        self.enzyme_panel.create(pos=(10, 670), width=400)
 
     def _get_param_dict(self) -> dict:
         """Get parameter dictionary for display."""
@@ -245,6 +258,59 @@ class SingleFiberApp:
         """Handle enzyme enable/disable."""
         # Update display to show/hide hazard info
         self._update_display()
+
+    def _on_mode_change(self, is_advanced: bool) -> None:
+        """Handle Novice/Advanced mode change."""
+        self._is_advanced_mode = is_advanced
+        # In advanced mode, show all enzyme controls
+        # In novice mode, use preset enzyme settings
+        self._update_display()
+
+    def _on_preset_change(self, preset_name: str) -> None:
+        """Handle preset selection change."""
+        try:
+            from .presets import get_preset
+            preset = get_preset(preset_name)
+
+            # Update config
+            self.config = preset.config
+            self.n_segments = preset.n_segments
+
+            # Recreate controller with new config
+            self.controller = ChainController(
+                self.config,
+                self.n_segments,
+                on_state_changed=self._on_state_changed
+            )
+
+            # Update enzyme panel if preset specifies enzyme settings
+            if preset.enzyme_model and preset.enzyme_params:
+                # Set the enzyme model in the panel
+                if hasattr(self.enzyme_panel, '_model_combo'):
+                    dpg.set_value(self.enzyme_panel._model_combo, preset.enzyme_model)
+                    self.enzyme_panel._current_model = preset.enzyme_model
+                    self.enzyme_panel._update_param_sliders(preset.enzyme_model)
+
+                    # Set parameter values
+                    for param_name, value in preset.enzyme_params.items():
+                        if param_name in self.enzyme_panel._param_sliders:
+                            dpg.set_value(
+                                self.enzyme_panel._param_sliders[param_name],
+                                value
+                            )
+                            self.enzyme_panel._current_params[param_name] = value
+
+                # Enable enzyme if preset has enzyme config enabled
+                if preset.config.enzyme.enabled:
+                    dpg.set_value(self.enzyme_panel._enable_checkbox, True)
+                    self.enzyme_panel._enabled = True
+
+            # Reset viewport and update display
+            self.viewport.reset_view()
+            self._update_display()
+
+        except (ImportError, KeyError) as e:
+            print(f"Error loading preset: {e}")
 
 
 def run_gui(config_path: Optional[str] = None, n_segments: int = 5) -> None:

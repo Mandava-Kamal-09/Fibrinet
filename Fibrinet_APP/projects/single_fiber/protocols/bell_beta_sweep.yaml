@@ -1,0 +1,49 @@
+# Protocol: Bell Slip Bond Beta Sweep
+# ====================================
+# Systematic sweep of force sensitivity (beta) in Bell slip bond model.
+#
+# Purpose: Map how force sensitivity affects rupture kinetics.
+# At higher beta, small tension differences dramatically affect lifetime.
+#
+# Expected outputs:
+#   - sweeps/bell_beta_sweep/sweep_summary.csv
+#   - sweeps/bell_beta_sweep/runs/*.csv
+#
+# Run with:
+#   python -m projects.single_fiber.src.single_fiber.enzyme_models.sweep_runner \
+#       projects/single_fiber/protocols/bell_beta_sweep.yaml
+
+base_config:
+  model:
+    law: hooke
+    hooke:
+      k_pN_per_nm: 0.1
+      L0_nm: 20.0
+  geometry:
+    x1_nm: [0, 0, 0]
+    x2_nm: [100, 0, 0]
+  dynamics:
+    dt_us: 0.1
+    gamma_pN_us_per_nm: 1.0
+  loading:
+    v_nm_per_us: 0.5
+    t_end_us: 300.0
+
+hazard_model: bell_slip
+
+parameter_grid:
+  # Fixed baseline rate
+  lambda0: [0.005]
+  # Force sensitivity: beta = x_ts / kBT where x_ts is transition state distance
+  # Typical biological values: 0.05-0.5 /pN
+  # At 10 pN: exp(beta * 10) = 1.6x (beta=0.05) to 150x (beta=0.5)
+  beta: [0.05, 0.1, 0.2, 0.3, 0.5]
+
+n_replicates: 50  # More replicates for rate constant estimation
+base_seed: 12345
+output_dir: sweeps/bell_beta_sweep
+
+description: |
+  Bell slip bond force sensitivity sweep.
+  Maps relationship between beta and mean rupture time.
+  Use results to estimate transition state distance from experimental data.

@@ -8,11 +8,37 @@ CLI-first, publication-grade single fibrin fiber simulator with Hookean and WLC 
 - **Overdamped dynamics**: Appropriate for low Reynolds number polymer systems
 - **Displacement-controlled loading**: Constant-velocity ramp with hard or soft constraints
 - **WLC rupture**: Fiber breaks when extension reaches contour length
-- **Enzyme scaffold**: Interface for future strain-dependent cleavage (Bell model ready)
+- **Strain-enzyme coupling**: Five hazard models (constant, linear, exponential, Bell slip, catch-slip)
+- **Interactive GUI**: DearPyGui-based visualization with novice/advanced modes
+- **Parameter sweeps**: Batch experiments with reproducible seeds
 - **Deterministic**: Identical outputs given identical config + seed
 - **Publication-ready exports**: CSV data and JSON metadata
 
+## What This Model Is / Is Not
+
+**This simulation IS:**
+- Overdamped quasi-static (no inertia)
+- Single-fiber mechanics (no network effects)
+- A platform for exploring strain-enzyme coupling hypotheses
+
+**This simulation is NOT:**
+- A fitted model (hazard parameters are not calibrated to experimental data)
+- A thermal simulation (no Brownian fluctuations)
+- A bending/torsion model (pure extensional mechanics)
+- A multi-fiber network (single isolated fiber only)
+
 ## Quick Start
+
+### GUI Mode (Recommended for Beginners)
+
+```bash
+# From Fibrinet_APP directory
+python -m projects.single_fiber.src.single_fiber.gui.app
+```
+
+See [ROOKIE_GUIDE.md](ROOKIE_GUIDE.md) for step-by-step instructions.
+
+### CLI Mode
 
 ```bash
 # From Fibrinet_APP directory
@@ -124,12 +150,75 @@ x_new = x_old + (dt / γ) × F_total
 
 Inertia neglected (low Reynolds number limit).
 
+## Presets
+
+Six curated presets are available for quick exploration:
+
+| Preset | Description |
+|--------|-------------|
+| `hooke_baseline` | Hookean spring, no enzyme |
+| `wlc_baseline` | WLC polymer, no enzyme |
+| `hooke_constant_hazard` | Hookean + constant cleavage rate |
+| `hooke_exp_strain` | Hookean + exponential strain-dependent hazard |
+| `wlc_bell_slip` | WLC + Bell slip bond |
+| `catch_slip_demo` | Catch-slip bond demonstrating biphasic behavior |
+
+Access presets via the GUI dropdown or load programmatically:
+
+```python
+from projects.single_fiber.src.single_fiber.gui.presets import get_preset
+preset = get_preset("hooke_exp_strain")
+config = preset.config
+```
+
+## Running Parameter Sweeps
+
+Sweep experiments explore parameter space systematically:
+
+```bash
+# Run a predefined protocol
+python -m projects.single_fiber.src.single_fiber.enzyme_models.sweep_runner \
+    projects/single_fiber/protocols/bell_beta_sweep.yaml
+```
+
+Protocol templates are in `protocols/`:
+- `hazard_comparison.yaml` - Compare hazard models
+- `bell_beta_sweep.yaml` - Sweep Bell model force sensitivity
+- `catch_slip_lifetime_sweep.yaml` - Explore catch-slip biphasic behavior
+- `replicate_convergence.yaml` - Determine adequate replicate count
+
+### Sweep Outputs
+
+Outputs go to `sweeps/<output_dir>/`:
+- `sweep_summary.csv` - One row per replicate with rupture statistics
+- `sweep_metadata.json` - Full configuration and parameters
+- `runs/*.csv` - Per-replicate time series data
+
+## Reproducibility
+
+For reproducible results:
+
+1. **Fix the seed**: Set `base_seed` in sweep config or `enzyme.seed` in simulation config
+2. **Record the config**: Always save the YAML file used
+3. **Record the commit**: Output metadata includes git commit hash
+
+Same config + same seed = identical results.
+
 ## Running Tests
 
 ```bash
 # From Fibrinet_APP directory
 pytest projects/single_fiber/tests -v
 ```
+
+## Benchmarks
+
+```bash
+# Run performance benchmarks
+python -m projects.single_fiber.benchmarks.benchmark_performance
+```
+
+Expected performance: >1000 steps/sec for typical configurations.
 
 ## Project Structure
 
