@@ -182,3 +182,32 @@ cython_debug/
 
 # Draw.io temporary files
 *.drawio~
+
+# ===========================================
+# Project-specific ignores (Phase 2 cleanup)
+# ===========================================
+
+# Output directories (generated artifacts)
+exports/
+output/
+test_output/
+generated_figures/
+validation_results/
+
+# Generated data files at root level
+/*.csv
+/*.png
+
+# Keep CSV files in data directories
+!data/**/*.csv
+!test/input_data/**/*.csv
+
+# Keep PNG files that are GUI assets
+!src/views/tkinter_view/images/*.png
+
+# IDE / tooling
+.claude/
+.idea/
+
+# Singularity container
+*.sif
