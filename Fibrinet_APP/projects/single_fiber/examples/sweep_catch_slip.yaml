@@ -1,0 +1,31 @@
+# Example: Catch-Slip Bond Parameter Sweep
+#
+# This sweep explores the biphasic force response of catch-slip bonds,
+# where moderate force STABILIZES the bond (catch regime) while high
+# force destabilizes it (slip regime).
+#
+# Physical Interpretation:
+# - A_c, beta_c: catch pathway (stabilizing at low force)
+# - A_s, beta_s: slip pathway (destabilizing at high force)
+# - Minimum lifetime occurs at intermediate force
+#
+# Run with:
+#   python -m single_fiber.enzyme_models.sweep_runner examples/sweep_catch_slip.yaml
+
+hazard_model: catch_slip
+
+parameter_grid:
+  lambda0: [0.01]  # Fixed baseline rate
+  A_c: [0.5, 1.0, 2.0]  # Catch amplitude
+  beta_c: [0.1, 0.2]  # Catch sensitivity
+  A_s: [0.5, 1.0]  # Slip amplitude
+  beta_s: [0.1, 0.2]  # Slip sensitivity
+
+n_replicates: 15
+base_seed: 456
+output_dir: sweeps/catch_slip_sweep
+
+description: >
+  Catch-slip bond sweep exploring biphasic force response.
+  Expect non-monotonic lifetime vs force: minimum at intermediate force
+  where catch and slip pathways balance.

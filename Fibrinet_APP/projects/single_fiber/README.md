@@ -1,6 +1,6 @@
 # Single Fiber Simulation
 
-CLI-first, publication-grade single fibrin fiber simulator with Hookean and WLC (Worm-Like Chain) force laws.
+CLI-first single fibrin fiber simulator with Hookean and WLC (Worm-Like Chain) force laws.
 
 ## Features
 
@@ -12,7 +12,7 @@ CLI-first, publication-grade single fibrin fiber simulator with Hookean and WLC 
 - **Interactive GUI**: DearPyGui-based visualization with novice/advanced modes
 - **Parameter sweeps**: Batch experiments with reproducible seeds
 - **Deterministic**: Identical outputs given identical config + seed
-- **Publication-ready exports**: CSV data and JSON metadata
+- **Structured exports**: CSV data and JSON metadata
 
 ## What This Model Is / Is Not
 
