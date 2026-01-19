@@ -72,29 +72,50 @@ class ChainViewport:
         self._bounds_locked = False
         self._initial_bounds_set = False
 
-    def create(self, parent_tag: Optional[int] = None) -> int:
+    def create(
+        self,
+        parent_tag: Optional[int] = None,
+        pos: Optional[Tuple[int, int]] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None
+    ) -> int:
         """
         Create viewport window and drawlist.
 
         Args:
             parent_tag: Parent window tag (optional).
+            pos: Window position (x, y).
+            width: Override width from config.
+            height: Override height from config.
 
         Returns:
             Window tag.
         """
-        with dpg.window(
-            label="Chain Viewport",
-            width=self.config.width,
-            height=self.config.height,
-            no_scrollbar=True,
-            no_scroll_with_mouse=True,
-            tag="viewport_window"
-        ) as self._window_tag:
+        # Allow overriding config dimensions
+        actual_width = width if width is not None else self.config.width
+        actual_height = height if height is not None else self.config.height
+
+        window_kwargs = {
+            "label": "Chain Viewport",
+            "width": actual_width,
+            "height": actual_height,
+            "no_scrollbar": True,
+            "no_scroll_with_mouse": True,
+            "tag": "viewport_window"
+        }
+        if pos is not None:
+            window_kwargs["pos"] = pos
+
+        # Update config with actual dimensions for transforms
+        self.config.width = actual_width
+        self.config.height = actual_height
+
+        with dpg.window(**window_kwargs) as self._window_tag:
 
             # Create drawlist for rendering
             self._drawlist_tag = dpg.add_drawlist(
-                width=self.config.width - 20,
-                height=self.config.height - 40,
+                width=actual_width - 20,
+                height=actual_height - 40,
                 tag="chain_drawlist"
             )
 

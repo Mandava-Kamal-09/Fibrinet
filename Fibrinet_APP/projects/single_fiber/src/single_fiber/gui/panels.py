@@ -5,12 +5,259 @@ Provides:
     - Status panel (time, strain, tension, etc.)
     - Control panel (play/pause, reset, settings)
     - Enzyme panel (hazard model selection, parameters)
+    - Mode panel (Novice/Advanced toggle + presets)
+    - Model Scope panel (model limitations)
 """
 
 import dearpygui.dearpygui as dpg
 from typing import Optional, Callable, Dict, Any, List
 
 from .controller import ControllerState, SimulationMode
+
+
+# =============================================================================
+# Mode Panel (Novice/Advanced + Presets)
+# =============================================================================
+
+class ModePanel:
+    """
+    Panel for Novice/Advanced mode toggle and presets selection.
+
+    Novice mode: Shows only essential controls, hides parameter sliders,
+                 provides curated presets with safe ranges.
+    Advanced mode: Full parameter control, all hazard models, sweep hooks.
+    """
+
+    def __init__(
+        self,
+        on_mode_change: Optional[Callable[[bool], None]] = None,
+        on_preset_change: Optional[Callable[[str], None]] = None
+    ):
+        """
+        Initialize mode panel.
+
+        Args:
+            on_mode_change: Callback when mode changes (advanced: bool)
+            on_preset_change: Callback when preset changes (preset_name)
+        """
+        self._on_mode_change = on_mode_change
+        self._on_preset_change = on_preset_change
+
+        self._window_tag: Optional[int] = None
+        self._mode_checkbox: Optional[int] = None
+        self._preset_combo: Optional[int] = None
+        self._preset_desc: Optional[int] = None
+
+        self._is_advanced = False
+        self._preset_names: List[str] = []
+        self._preset_display_names: Dict[str, str] = {}
+
+    def create(self, pos: tuple = (10, 10), width: int = 400) -> int:
+        """
+        Create mode panel window.
+
+        Args:
+            pos: Window position
+            width: Panel width
+
+        Returns:
+            Window tag
+        """
+        # Load presets
+        try:
+            from .presets import list_presets, get_preset_display_names
+            self._preset_names = list_presets(novice_only=not self._is_advanced)
+            self._preset_display_names = get_preset_display_names()
+        except ImportError:
+            self._preset_names = []
+            self._preset_display_names = {}
+
+        preset_display = [
+            self._preset_display_names.get(n, n) for n in self._preset_names
+        ]
+
+        with dpg.window(
+            label="Mode & Presets",
+            pos=pos,
+            width=width,
+            height=140,
+            no_resize=True,
+            no_move=False,
+            tag="mode_panel"
+        ) as self._window_tag:
+
+            with dpg.group(horizontal=True):
+                dpg.add_text("Mode:", color=(200, 200, 255))
+                self._mode_checkbox = dpg.add_checkbox(
+                    label="Advanced Mode",
+                    default_value=False,
+                    callback=self._mode_changed
+                )
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(
+                        "Novice: Curated presets, safe ranges\n"
+                        "Advanced: Full parameter control"
+                    )
+
+            dpg.add_separator()
+
+            dpg.add_text("Preset:", color=(150, 200, 150))
+            with dpg.group(horizontal=True):
+                self._preset_combo = dpg.add_combo(
+                    items=preset_display,
+                    default_value=preset_display[0] if preset_display else "",
+                    width=300,
+                    callback=self._preset_changed
+                )
+                dpg.add_button(
+                    label="Info",
+                    width=50,
+                    callback=self._show_preset_info
+                )
+
+            self._preset_desc = dpg.add_text(
+                "",
+                wrap=390,
+                color=(180, 180, 180)
+            )
+
+            # Show initial preset description
+            if self._preset_names:
+                self._update_preset_description(self._preset_names[0])
+
+        return self._window_tag
+
+    def _mode_changed(self, sender, app_data) -> None:
+        """Handle mode toggle."""
+        self._is_advanced = app_data
+
+        # Update preset list based on mode
+        try:
+            from .presets import list_presets, get_preset_display_names
+            self._preset_names = list_presets(novice_only=not self._is_advanced)
+            self._preset_display_names = get_preset_display_names()
+            preset_display = [
+                self._preset_display_names.get(n, n) for n in self._preset_names
+            ]
+            dpg.configure_item(self._preset_combo, items=preset_display)
+            if preset_display:
+                dpg.set_value(self._preset_combo, preset_display[0])
+                self._update_preset_description(self._preset_names[0])
+        except ImportError:
+            pass
+
+        if self._on_mode_change:
+            self._on_mode_change(app_data)
+
+    def _preset_changed(self, sender, app_data) -> None:
+        """Handle preset selection."""
+        # Find preset name from display name
+        preset_name = None
+        for name, display in self._preset_display_names.items():
+            if display == app_data:
+                preset_name = name
+                break
+
+        if preset_name:
+            self._update_preset_description(preset_name)
+            if self._on_preset_change:
+                self._on_preset_change(preset_name)
+
+    def _update_preset_description(self, preset_name: str) -> None:
+        """Update preset description text."""
+        try:
+            from .presets import get_preset
+            preset = get_preset(preset_name)
+            desc = preset.description[:100]
+            if len(preset.description) > 100:
+                desc += "..."
+            dpg.set_value(self._preset_desc, desc)
+        except (ImportError, KeyError):
+            dpg.set_value(self._preset_desc, "")
+
+    def _show_preset_info(self) -> None:
+        """Show detailed preset info."""
+        try:
+            from .presets import get_preset
+            current_display = dpg.get_value(self._preset_combo)
+            for name, display in self._preset_display_names.items():
+                if display == current_display:
+                    preset = get_preset(name)
+                    print(f"\n{'='*60}")
+                    print(f"PRESET: {preset.display_name}")
+                    print(f"{'='*60}")
+                    print(f"\nDescription:\n{preset.description}")
+                    print(f"\nExpected Behavior:\n{preset.expected_behavior}")
+                    print(f"\nSafety Notes:\n{preset.safety_notes}")
+                    print(f"{'='*60}\n")
+                    break
+        except (ImportError, KeyError):
+            print("Preset info not available")
+
+    @property
+    def is_advanced(self) -> bool:
+        """Return whether advanced mode is enabled."""
+        return self._is_advanced
+
+    def get_current_preset_name(self) -> Optional[str]:
+        """Get currently selected preset name."""
+        current_display = dpg.get_value(self._preset_combo)
+        for name, display in self._preset_display_names.items():
+            if display == current_display:
+                return name
+        return None
+
+
+# =============================================================================
+# Model Scope Panel
+# =============================================================================
+
+class ModelScopePanel:
+    """
+    Panel displaying model limitations and scope.
+
+    Always visible to prevent misinterpretation of results.
+    """
+
+    def __init__(self):
+        self._window_tag: Optional[int] = None
+
+    def create(self, pos: tuple = (420, 10), width: int = 390) -> int:
+        """
+        Create model scope panel.
+
+        Args:
+            pos: Window position
+            width: Panel width
+
+        Returns:
+            Window tag
+        """
+        with dpg.window(
+            label="Model Scope & Limitations",
+            pos=pos,
+            width=width,
+            height=140,
+            no_resize=True,
+            no_move=False,
+            no_close=True,
+            tag="scope_panel"
+        ) as self._window_tag:
+
+            dpg.add_text("This simulation is:", color=(255, 200, 100))
+
+            limitations = [
+                "Overdamped quasi-static (no inertia)",
+                "No thermal fluctuations / Brownian motion",
+                "No bending or torsional mechanics",
+                "No fiber-fiber interactions",
+                "Hazard models are candidate forms (not fitted to data)",
+            ]
+
+            for item in limitations:
+                dpg.add_text(f"- {item}", color=(200, 200, 200), indent=10)
+
+        return self._window_tag
 
 
 class StatusPanel:
