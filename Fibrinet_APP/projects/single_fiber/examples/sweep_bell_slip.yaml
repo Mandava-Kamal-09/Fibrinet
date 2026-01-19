@@ -1,0 +1,28 @@
+# Example: Bell Slip Bond Parameter Sweep
+#
+# This sweep explores how force sensitivity (beta) affects tension-dependent
+# enzymatic cleavage following classic Bell model kinetics.
+#
+# Physical Interpretation:
+# - lambda0: intrinsic cleavage rate at zero force
+# - beta: force sensitivity (units: 1/pN)
+#   - beta = x_dagger / kBT, where x_dagger is distance to transition state
+#   - Typical values for fibrin: 0.1 - 0.3 /pN
+#
+# Run with:
+#   python -m single_fiber.enzyme_models.sweep_runner examples/sweep_bell_slip.yaml
+
+hazard_model: bell_slip
+
+parameter_grid:
+  lambda0: [0.001, 0.01]  # 1/us: baseline rates
+  beta: [0.05, 0.1, 0.2, 0.3]  # 1/pN: force sensitivity
+
+n_replicates: 20
+base_seed: 123
+output_dir: sweeps/bell_slip_sweep
+
+description: >
+  Bell slip bond sweep exploring force-dependent cleavage.
+  Higher beta means force more strongly accelerates rupture.
+  Expect monotonic decrease in rupture time with increasing beta.

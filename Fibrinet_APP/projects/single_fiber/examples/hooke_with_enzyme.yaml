@@ -1,0 +1,44 @@
+# Single Fiber Simulation - Hookean Spring with Enzyme Cleavage
+# ==============================================================
+# Units: nm, pN, us, pN*nm
+#
+# This example enables enzymatic cleavage using the exponential
+# strain hazard model. The fiber can rupture stochastically before
+# reaching the mechanical rupture limit.
+
+model:
+  law: hooke
+  hooke:
+    k_pN_per_nm: 0.1      # Spring constant (pN/nm)
+    L0_nm: 100.0          # Rest length (nm)
+    extension_only: true  # No compression forces
+
+geometry:
+  x1_nm: [0.0, 0.0, 0.0]      # Fixed node position
+  x2_nm: [100.0, 0.0, 0.0]    # Initial free node position
+
+dynamics:
+  dt_us: 0.1                  # Time step (us)
+  gamma_pN_us_per_nm: 1.0     # Drag coefficient
+  relax_steps_per_increment: 1
+
+loading:
+  mode: displacement_ramp
+  axis: [1.0, 0.0, 0.0]       # Pull along x-axis
+  v_nm_per_us: 0.5            # Velocity (nm/us)
+  t_end_us: 100.0             # Total time (us)
+  constraint: hard            # Hard position constraint
+
+# Enzyme cleavage configuration
+enzyme:
+  enabled: true
+  seed: 42                     # Random seed for reproducibility
+  hazard_model: exponential_strain  # Strain-dependent cleavage
+  hazard_params:
+    lambda0: 0.01              # Baseline rate (1/us)
+    alpha: 5.0                 # Strain sensitivity coefficient
+
+output:
+  out_dir: output
+  run_name: hooke_enzyme
+  save_every_steps: 10

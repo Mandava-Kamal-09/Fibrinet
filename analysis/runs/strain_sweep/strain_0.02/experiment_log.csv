@@ -1,0 +1,5 @@
+batch_index,time,strain,intact_edges,ruptured_edges_total,newly_ruptured,mean_tension,lysis_fraction,param_lambda_0,param_dt,param_delta,param_force_alpha,param_force_F0,param_force_hill_n,param_rate_beta,param_plastic_rate,param_rupture_gamma,param_fracture_Gc,param_fracture_eta,param_coop_chi,param_aniso_kappa,param_memory_mu,param_memory_rho
+0.0,0.05,0.02,239.0,16.0,16.0,0.06596435541218623,0.06544313930157719,0.15,0.05,0.05,1.0,1.0,2.0,0.5,0.01,0.5,0.5,0.3,0.5,0.5,0.2,0.1
+1.0,0.1,0.02,223.0,32.0,16.0,0.005212079378082717,0.12560633962250634,0.15,0.05,0.05,1.0,1.0,2.0,0.5,0.01,0.5,0.5,0.3,0.5,0.5,0.2,0.1
+2.0,0.15000000000000002,0.02,221.0,34.0,2.0,0.0004158630697340254,0.1443084148458328,0.15,0.05,0.05,1.0,1.0,2.0,0.5,0.01,0.5,0.5,0.3,0.5,0.5,0.2,0.1
+3.0,0.2,0.02,221.0,34.0,0.0,0.0004158630697340254,0.14430841484583257,0.15,0.05,0.05,1.0,1.0,2.0,0.5,0.01,0.5,0.5,0.3,0.5,0.5,0.2,0.1

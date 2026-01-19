@@ -88,6 +88,7 @@ class FeatureFlags:
         """Reset all flags to legacy defaults."""
         cls.USE_SPATIAL_PLASMIN = False
         cls.ALLOW_MULTIPLE_PLASMIN_PER_EDGE = False
+        cls.SPATIAL_PLASMIN_CRITICAL_DAMAGE = 0.7  # Phase 5.5: reset to documented default
     
     @classmethod
     def validate(cls) -> bool:
