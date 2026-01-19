@@ -26,7 +26,6 @@ import tempfile
 import csv
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_cleavage_decreases_n_i():
     """
     Test A: Cleavage decreases n_i when B_i > 0.
@@ -148,7 +147,6 @@ def test_cleavage_decreases_n_i():
         FeatureFlags.USE_SPATIAL_PLASMIN = original_flag
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_no_cleavage_when_no_binding():
     """
     Test B: No cleavage when B_i = 0.
@@ -247,7 +245,6 @@ def test_no_cleavage_when_no_binding():
         FeatureFlags.USE_SPATIAL_PLASMIN = original_flag
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_dt_cleave_stability():
     """
     Test C: dt_cleave stability triggers.
@@ -332,7 +329,6 @@ def test_dt_cleave_stability():
         FeatureFlags.USE_SPATIAL_PLASMIN = original_flag
 
 
-@pytest.mark.skip(reason="Phase 5.5: Solver reconciliation bug in spatial plasmin mode - k_eff_intact mapping fails")
 def test_phase_separation_guards():
     """
     Test D: Phase separation guards.

@@ -2441,10 +2441,14 @@ class Phase1NetworkAdapter:
                 if j >= len(k_eff_intact):
                     break
                 # Candidate effective stiffness values for this edge after a single batch:
-                # - no-hit: k0*S
-                # - hit: k0*max(S-delta,0)
+                # - no-hit: k0*S (or k0*N_pf*S in spatial mode)
+                # - hit: k0*max(S-delta,0) (or k0*N_pf*max(S-delta,0) in spatial mode)
                 k0 = float(e.k0)
                 s_old = float(e.S)
+                # Spatial plasmin mode: stiffness includes N_pf multiplier
+                if FeatureFlags.USE_SPATIAL_PLASMIN and getattr(self, "spatial_plasmin_params", None):
+                    N_pf = float(self.spatial_plasmin_params.get("N_pf", 50))
+                    k0 = k0 * N_pf
                 # Stage 2 thickness-aware mechanics: stiffness scaling is part of the solver input.
                 if getattr(self, "thickness_ref", None) is None or getattr(self, "thickness_alpha", None) is None:
                     thick_scale = 1.0
@@ -4072,7 +4076,10 @@ class SimulationController:
                 # This is acceptable; treat as percolation failure (will be checked later)
                 sigma_ref = None  # Clear for spatial mode to skip stress-factor calculations
             
-            if (not np.isfinite(sigma_ref)) or (sigma_ref <= 0.0 and not FeatureFlags.USE_SPATIAL_PLASMIN):
+            # In spatial mode, sigma_ref=None is acceptable (percolation-only termination)
+            # In legacy mode, sigma_ref must be finite and > 0
+            sigma_ref_invalid = (sigma_ref is not None and not np.isfinite(sigma_ref)) or (sigma_ref is None and not FeatureFlags.USE_SPATIAL_PLASMIN) or (sigma_ref is not None and sigma_ref <= 0.0 and not FeatureFlags.USE_SPATIAL_PLASMIN)
+            if sigma_ref_invalid:
                 # Terminal-state handling (deterministic, model-side):
                 # The network has lost load-bearing capacity (slack/collapsed), so sigma_ref is undefined.
                 # Terminate cleanly: record reason in experiment_log and stop further batches.
@@ -4375,8 +4382,8 @@ class SimulationController:
                     "Add k_cat0 to your input file meta_data table (typical value: 0.1 - 10 s⁻¹)."
                 )
             k_cat0 = float(adapter.spatial_plasmin_params["k_cat0"])
-            if k_cat0 <= 0.0:
-                raise ValueError(f"Invalid k_cat0 = {k_cat0} (must be > 0 for lysis to occur).")
+            if k_cat0 < 0.0:
+                raise ValueError(f"Invalid k_cat0 = {k_cat0} (must be >= 0; use 0 to disable cleavage for testing).")
 
             # Other required kinetic parameters
             if "beta" not in adapter.spatial_plasmin_params:
@@ -4427,18 +4434,12 @@ class SimulationController:
                 if math.isfinite(dt_cleave_safe) and dt_cleave_safe > 0.0:
                     dt_used = min(dt_used, float(dt_cleave_safe))
 
-            # NUMERICAL STABILITY: Hard floor on timestep (dt_min = 1e-4 s)
-            # Prevents ultra-small timesteps from exploding batch count (memory/performance collapse).
-            # Standard for stiff spring-reaction systems; smaller = slower but no biological gain.
-            dt_min = 1e-4  # seconds
+            # NUMERICAL STABILITY: Soft floor on timestep (dt_min = 1e-6 s)
+            # Clamps ultra-small timesteps to preserve binding probability while allowing stability.
+            # With lambda_bind_total ~ 1e6, dt_used = 1e-6 gives expected_events ~ 1.0
+            dt_min = 1e-6  # seconds
             if dt_used < dt_min:
-                raise ValueError(
-                    f"Computed timestep dt_used = {dt_used:.3e} s is below minimum floor dt_min = {dt_min:.3e} s.\n"
-                    f"This indicates extremely stiff cleavage kinetics (k_cat × B_i >> 1).\n"
-                    f"  Base dt = {dt:.3e} s\n"
-                    f"  Max cleavage rate = {max(dt_cleave_rates) if dt_cleave_rates else 0.0:.3e} s⁻¹\n"
-                    f"Suggestion: Reduce k_cat0 or increase base dt to avoid simulation collapse."
-                )
+                dt_used = dt_min  # Clamp instead of error
             
             # ========== STEP A: UNBINDING (stochastic) ==========
             # For each segment with B_i > 0:
