@@ -5,7 +5,7 @@ Command-line interface for loading, modifying, relaxing, and exporting networks.
 ## Start
 From repo root:
 ```bash
-python Fibrinet_APP/cli_main.py
+python Fibrinet_APP/scripts/cli/cli_main.py
 ```
 
 ## Typical flow
@@ -41,7 +41,7 @@ Single sheet with three tables separated by a blank row:
 
 ## Example
 ```bash
-python Fibrinet_APP/cli_main.py
+python Fibrinet_APP/scripts/cli/cli_main.py
 input_network Fibrinet_APP/test/input_data/TestNetwork.xlsx
 status
 set_degradation_engine twodimensionalspringforcedegradationenginewithoutbiomechanics

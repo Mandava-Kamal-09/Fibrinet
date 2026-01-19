@@ -15,8 +15,8 @@ A GUI and CLI tool for modeling and analyzing fibrin-like networks under tension
 
 **Entry points:**
 - GUI: `python FibriNet.py`
-- CLI: `python cli_main.py`
-- Collapse analyzer: `python analyze_collapse_cli.py`
+- CLI: `python scripts/cli/cli_main.py`
+- Collapse analyzer: `python scripts/cli/analyze_collapse_cli.py`
 
 ## 2. Single Fiber Simulator
 

@@ -45,7 +45,7 @@ Iteratively removes edges from a fibrin network using a greedy min-cut approach 
 
 ## Usage
 ```bash
-python Fibrinet_APP/analyze_collapse_cli.py <input.xlsx> [--out-dir <path>] [--max-steps <N>]
+python Fibrinet_APP/scripts/cli/analyze_collapse_cli.py <input.xlsx> [--out-dir <path>] [--max-steps <N>]
 ```
 
 ### Arguments
@@ -55,7 +55,7 @@ python Fibrinet_APP/analyze_collapse_cli.py <input.xlsx> [--out-dir <path>] [--m
 
 ### Example
 ```bash
-python Fibrinet_APP/analyze_collapse_cli.py test/input_data/fibrin_network_big.xlsx --out-dir exports/big_analysis --max-steps 100
+python Fibrinet_APP/scripts/cli/analyze_collapse_cli.py test/input_data/fibrin_network_big.xlsx --out-dir exports/big_analysis --max-steps 100
 ```
 
 ## Output Files
