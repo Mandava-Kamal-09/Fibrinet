@@ -342,7 +342,7 @@ class EdgeEvolutionEngine:
                 L = float(np.sqrt((p_to[0] - p_from[0])**2 + (p_to[1] - p_from[1])**2)) if p_from and p_to else 0.0
                 dL_geom = float(L) - float(L_eff)
                 E_i = 0.5 * float(e.k0) * float(S_old) * (dL_geom * dL_geom)
-                e_gate = 1.0 if E_i <= Gc else (1.0 + fracture_eta * (E_i - Gc))
+                e_gate = 1.0 if E_i <= fracture_Gc else (1.0 + fracture_eta * (E_i - fracture_Gc))
 
                 # Cooperativity gate (neighbor damage)
                 neighbor_ids = set(node_to_edge_ids.get(e.n_from, [])) | set(node_to_edge_ids.get(e.n_to, []))

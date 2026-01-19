@@ -77,7 +77,6 @@ class TestEdgeEvolutionEngineStateless:
 class TestEdgeEvolutionEngineDeterminism:
     """Verify deterministic outputs for fixed inputs."""
 
-    @pytest.mark.skip(reason="Phase 5.5: NameError - 'Gc' is not defined in _evolve_edges_legacy")
     def test_evolve_edges_deterministic_legacy(self):
         """Legacy path: same inputs -> identical S updates."""
         FeatureFlags.legacy_mode()
@@ -162,7 +161,6 @@ class TestEdgeEvolutionEngineDeterminism:
 class TestEdgeEvolutionEngineLegacyBypass:
     """Verify feature flag OFF -> legacy path is unchanged."""
 
-    @pytest.mark.skip(reason="Phase 5.5: NameError - 'Gc' is not defined in _evolve_edges_legacy")
     def test_legacy_path_produces_results(self):
         """Legacy path should produce EdgeEvolutionResult without errors."""
         FeatureFlags.legacy_mode()
@@ -269,7 +267,6 @@ class TestEdgeEvolutionEngineSpatialPath:
 class TestEdgeEvolutionEngineImmutability:
     """Verify no input mutations; all outputs are new instances."""
 
-    @pytest.mark.skip(reason="Phase 5.5: NameError - 'Gc' is not defined in _evolve_edges_legacy")
     def test_evolve_edges_no_input_mutation(self):
         """evolve_edges() should not modify input edges."""
         FeatureFlags.legacy_mode()
@@ -316,7 +313,6 @@ class TestEdgeEvolutionEngineImmutability:
         assert edges[0] == edges_original[0]
         assert edges[0].S == 1.0
 
-    @pytest.mark.skip(reason="Phase 5.5: NameError - 'Gc' is not defined in _evolve_edges_legacy")
     def test_evolve_edges_returns_new_edges(self):
         """evolve_edges() should return new edge instances."""
         FeatureFlags.legacy_mode()

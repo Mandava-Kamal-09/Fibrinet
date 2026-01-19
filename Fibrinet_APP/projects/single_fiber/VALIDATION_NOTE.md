@@ -26,7 +26,9 @@ When experimental data is provided:
 
 ## Current Status
 
-- Phase 3: COMPLETE (physics engine validated, 96/96 tests pass)
+- Phase 3: COMPLETE (physics engine implemented)
 - Phase 4: SCAFFOLD ONLY (experimentation framework structure defined)
 
-The tool is scientifically sound for its stated scope (single-fiber overdamped mechanics with WLC/Hookean force laws). Any claims about biological fidelity require future calibration against appropriate experimental data.
+To verify tests pass: `pytest projects/single_fiber/tests -v`
+
+The tool implements single-fiber overdamped mechanics with WLC/Hookean force laws. Any claims about biological fidelity require calibration against appropriate experimental data.

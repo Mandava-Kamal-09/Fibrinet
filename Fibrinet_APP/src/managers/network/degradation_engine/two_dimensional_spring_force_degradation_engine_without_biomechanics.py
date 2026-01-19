@@ -57,7 +57,7 @@ class TwoDimensionalSpringForceDegradationEngineWithoutBiomechanics(DegradationE
     def compute_node_forces(self, network: Network2D):
         """Compute net spring force on each node via Hooke's law."""
         forces = {node.get_id(): np.array([0.0, 0.0]) for node in network.get_nodes()}
-        k = network.meta_data.get("spring_stiffness_constant", 1.0)
+        k_global = network.meta_data.get("spring_stiffness_constant", 1.0)
 
         for edge in network.get_edges():
             n_from = network.get_node_by_id(edge.n_from)
@@ -70,7 +70,8 @@ class TwoDimensionalSpringForceDegradationEngineWithoutBiomechanics(DegradationE
                 continue
             unit_vector = vector / length
             rest_length = getattr(edge, "rest_length", length)
-            force_magnitude = k * (length - rest_length)
+            k_edge = getattr(edge, "spring_constant", k_global)
+            force_magnitude = k_edge * (length - rest_length)
             force = force_magnitude * unit_vector
             forces[n_from.get_id()] += force
             forces[n_to.get_id()] -= force

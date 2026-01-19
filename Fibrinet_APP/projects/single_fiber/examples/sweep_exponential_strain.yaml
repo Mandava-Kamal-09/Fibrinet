@@ -1,0 +1,36 @@
+# Example: Exponential Strain Hazard Parameter Sweep
+#
+# This sweep explores how strain sensitivity (alpha) and baseline rate (lambda0)
+# affect enzymatic cleavage timing under displacement-controlled loading.
+#
+# Physical Interpretation:
+# - lambda0: intrinsic plasmin cleavage rate at zero strain
+# - alpha: how strongly strain accelerates cleavage
+#
+# Run with:
+#   python -m single_fiber.enzyme_models.sweep_runner examples/sweep_exponential_strain.yaml
+
+# Base simulation configuration (optional - uses defaults if not provided)
+base_config: ""
+
+# Hazard model to use
+hazard_model: exponential_strain
+
+# Parameter grid - all combinations will be tested
+parameter_grid:
+  lambda0: [0.001, 0.01, 0.1]  # 1/us: low, medium, high baseline
+  alpha: [1.0, 5.0, 10.0, 20.0]  # strain sensitivity
+
+# Replicates per parameter combination (for statistical power)
+n_replicates: 10
+
+# Base seed for reproducibility
+base_seed: 42
+
+# Output directory for results
+output_dir: sweeps/exponential_strain_sweep
+
+# Human-readable description
+description: >
+  Exponential strain hazard sweep exploring strain sensitivity.
+  Expected result: higher alpha leads to earlier rupture at same loading rate.
