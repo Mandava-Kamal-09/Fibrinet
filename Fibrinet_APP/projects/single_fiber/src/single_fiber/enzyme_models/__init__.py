@@ -1,41 +1,114 @@
 """
 Strain-dependent enzyme cleavage models.
 
-Phase 4 scaffold: registry of hazard rate functions for
-strain/tension-dependent enzymatic cleavage.
+Phase 4: Strain–Enzyme Coupling Lab
 
 This module provides:
-- Hazard function registry (name → callable)
-- Standard hazard models (constant, linear, exponential, catch-slip)
-- Poisson sampling with variable rates
+- Hazard function library (constant, linear, exponential, Bell, catch-slip)
+- Coupling registry (name → callable with parameter schemas)
+- Poisson sampler for stochastic cleavage events
 
-Usage (future):
-    from single_fiber.enzyme_models import get_hazard_function
+Usage:
+    from single_fiber.enzyme_models import (
+        get_hazard,
+        list_hazards,
+        EnzymeCleavageSampler,
+    )
 
-    hazard_fn = get_hazard_function("exponential")
-    rate = hazard_fn(strain=0.5, params={"lambda0": 0.01, "beta": 2.0})
+    # Get hazard function
+    hazard_fn = get_hazard("exponential_strain")
+
+    # Compute hazard rate
+    rate = hazard_fn(strain=0.3, tension_pN=5.0, params={"lambda0": 0.01, "alpha": 5.0})
+
+    # Sample cleavage events
+    sampler = EnzymeCleavageSampler(seed=42)
+    did_rupture = sampler.sample_rupture(hazard_rate=rate, dt_us=0.1)
 """
 
-from typing import Callable, Dict, Any, Optional
+# Import hazard functions
+from .hazards import (
+    constant_hazard,
+    linear_strain_hazard,
+    exponential_strain_hazard,
+    bell_slip_tension_hazard,
+    catch_slip_tension_hazard,
+    MAX_HAZARD_RATE,
+    MIN_HAZARD_RATE,
+)
 
-# Type alias for hazard functions
-# HazardFunction(strain: float, params: dict) -> float (rate in 1/µs)
-HazardFunction = Callable[[float, Dict[str, Any]], float]
+# Import registry functions
+from .coupling_registry import (
+    get_hazard,
+    get_hazard_spec,
+    list_hazards,
+    validate_params,
+    get_default_params,
+    HazardSpec,
+    HazardFunction,
+)
 
-# Registry placeholder - will be populated in hazard_functions.py
-_HAZARD_REGISTRY: Dict[str, HazardFunction] = {}
+# Import sampler
+from .sampler import (
+    EnzymeCleavageSampler,
+    CleavageEvent,
+    compute_survival_probability,
+    compute_mean_rupture_time,
+)
+
+# Import metrics
+from .metrics import (
+    SurvivalCurve,
+    RuptureStatistics,
+    compute_survival_curve,
+    compute_rupture_statistics,
+    compute_hazard_vs_strain_curve,
+    compute_hazard_vs_tension_curve,
+)
+
+# Import sweep runner
+from .sweep_runner import (
+    SweepConfig,
+    SweepResult,
+    load_sweep_config,
+    run_sweep,
+    analyze_sweep_results,
+)
 
 
-def register_hazard(name: str, fn: HazardFunction) -> None:
-    """Register a hazard function by name."""
-    _HAZARD_REGISTRY[name] = fn
-
-
-def get_hazard_function(name: str) -> Optional[HazardFunction]:
-    """Retrieve a hazard function by name, or None if not found."""
-    return _HAZARD_REGISTRY.get(name)
-
-
-def list_hazard_functions() -> list:
-    """List all registered hazard function names."""
-    return list(_HAZARD_REGISTRY.keys())
+__all__ = [
+    # Hazard functions
+    "constant_hazard",
+    "linear_strain_hazard",
+    "exponential_strain_hazard",
+    "bell_slip_tension_hazard",
+    "catch_slip_tension_hazard",
+    "MAX_HAZARD_RATE",
+    "MIN_HAZARD_RATE",
+    # Registry
+    "get_hazard",
+    "get_hazard_spec",
+    "list_hazards",
+    "validate_params",
+    "get_default_params",
+    "HazardSpec",
+    "HazardFunction",
+    # Sampler
+    "EnzymeCleavageSampler",
+    "CleavageEvent",
+    "compute_survival_probability",
+    "compute_mean_rupture_time",
+    # Metrics
+    "SurvivalCurve",
+    "RuptureStatistics",
+    "compute_survival_curve",
+    "compute_rupture_statistics",
+    "compute_hazard_vs_strain_curve",
+    "compute_hazard_vs_tension_curve",
+    # Sweep runner
+    "SweepConfig",
+    "SweepResult",
+    "load_sweep_config",
+    "run_sweep",
+    "analyze_sweep_results",
+]

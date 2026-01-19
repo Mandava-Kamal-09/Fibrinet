@@ -4,11 +4,11 @@ UI panels for chain simulation GUI.
 Provides:
     - Status panel (time, strain, tension, etc.)
     - Control panel (play/pause, reset, settings)
+    - Enzyme panel (hazard model selection, parameters)
 """
 
 import dearpygui.dearpygui as dpg
-from typing import Optional, Callable
-from dataclasses import dataclass
+from typing import Optional, Callable, Dict, Any, List
 
 from .controller import ControllerState, SimulationMode
 
@@ -196,7 +196,10 @@ class ControlPanel:
             )
 
             dpg.add_spacer(height=10)
-            dpg.add_text("Time Scale", color=(150, 200, 150))
+            dpg.add_text("Animation Speed", color=(150, 200, 150))
+
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text("Controls visual playback only.\nPhysics timestep dt is fixed.")
 
             dpg.add_slider_float(
                 label="",
@@ -283,3 +286,284 @@ class ParameterPanel:
                     dpg.add_text(f"{key}: {value}")
 
         return self._window_tag
+
+
+class EnzymePanel:
+    """
+    Enzyme control panel for strain-enzyme coupling experiments.
+
+    Provides:
+        - Hazard model dropdown
+        - Auto-generated parameter sliders
+        - Live hazard rate display
+        - Rupture probability per step
+    """
+
+    # Physical descriptions for tooltips
+    MODEL_TOOLTIPS = {
+        "constant": "Constant hazard rate, independent of strain/tension.\nNull model for baseline enzymatic activity.",
+        "linear_strain": "Linear strain-dependent: λ = λ₀(1 + αε).\nMild mechanosensitivity.",
+        "exponential_strain": "Exponential strain-dependent: λ = λ₀·exp(αε).\nStrong mechanosensitivity with cooperative unfolding.",
+        "bell_slip": "Bell model slip bond: λ = λ₀·exp(βT).\nClassic force-accelerated bond rupture.",
+        "catch_slip": "Catch-slip bond: biphasic force response.\nLow force stabilizes, high force destabilizes.",
+    }
+
+    def __init__(
+        self,
+        on_model_change: Optional[Callable[[str], None]] = None,
+        on_param_change: Optional[Callable[[str, float], None]] = None,
+        on_enable_change: Optional[Callable[[bool], None]] = None
+    ):
+        """
+        Initialize enzyme panel.
+
+        Args:
+            on_model_change: Callback when hazard model changes (model_name)
+            on_param_change: Callback when parameter changes (param_name, value)
+            on_enable_change: Callback when enzyme enabled/disabled (enabled)
+        """
+        self._on_model_change = on_model_change
+        self._on_param_change = on_param_change
+        self._on_enable_change = on_enable_change
+
+        self._window_tag: Optional[int] = None
+        self._model_combo: Optional[int] = None
+        self._enable_checkbox: Optional[int] = None
+        self._hazard_rate_text: Optional[int] = None
+        self._mean_time_text: Optional[int] = None
+        self._rupture_prob_text: Optional[int] = None
+        self._param_sliders: Dict[str, int] = {}
+        self._param_container: Optional[int] = None
+
+        # Current state
+        self._current_model: str = "constant"
+        self._current_params: Dict[str, float] = {}
+        self._enabled: bool = False
+
+    def create(self, pos: tuple = (10, 620), width: int = 400) -> int:
+        """
+        Create enzyme panel window.
+
+        Args:
+            pos: Window position (x, y)
+            width: Panel width
+
+        Returns:
+            Window tag
+        """
+        with dpg.window(
+            label="Enzyme Coupling",
+            pos=pos,
+            width=width,
+            height=200,
+            no_resize=True,
+            no_move=False,
+            tag="enzyme_panel"
+        ) as self._window_tag:
+
+            dpg.add_text("Strain-Enzyme Coupling", color=(200, 200, 255))
+            dpg.add_separator()
+
+            # Enable checkbox
+            with dpg.group(horizontal=True):
+                self._enable_checkbox = dpg.add_checkbox(
+                    label="Enable Enzyme",
+                    default_value=False,
+                    callback=self._enable_changed
+                )
+                dpg.add_text("(not fitted to data)", color=(150, 150, 150))
+
+            dpg.add_spacer(height=5)
+
+            # Model selection
+            dpg.add_text("Hazard Model:", color=(150, 200, 150))
+            with dpg.group(horizontal=True):
+                self._model_combo = dpg.add_combo(
+                    items=["constant", "linear_strain", "exponential_strain",
+                           "bell_slip", "catch_slip"],
+                    default_value="constant",
+                    width=150,
+                    callback=self._model_changed
+                )
+                dpg.add_button(
+                    label="?",
+                    width=25,
+                    callback=self._show_model_help
+                )
+
+            dpg.add_spacer(height=5)
+
+            # Parameter sliders container
+            dpg.add_text("Parameters:", color=(150, 200, 150))
+            self._param_container = dpg.add_group()
+
+            dpg.add_spacer(height=5)
+
+            # Live display
+            dpg.add_text("Current State:", color=(200, 150, 150))
+            self._hazard_rate_text = dpg.add_text("λ = 0.000 /µs")
+            self._mean_time_text = dpg.add_text("Mean time: not defined")
+            self._rupture_prob_text = dpg.add_text("P(rupture in Δt) = 0.0%")
+
+        # Initialize with default model
+        self._update_param_sliders("constant")
+
+        return self._window_tag
+
+    def _update_param_sliders(self, model_name: str) -> None:
+        """Update parameter sliders for selected model."""
+        # Import registry here to avoid circular import
+        try:
+            from ..enzyme_models import get_hazard_spec, get_default_params
+        except ImportError:
+            return
+
+        # Clear existing sliders
+        if self._param_container is not None:
+            dpg.delete_item(self._param_container, children_only=True)
+        self._param_sliders.clear()
+
+        try:
+            spec = get_hazard_spec(model_name)
+            defaults = get_default_params(model_name)
+        except KeyError:
+            return
+
+        # Create sliders for each parameter
+        for param_name in spec.required_params:
+            desc, units, (min_val, max_val) = spec.param_descriptions[param_name]
+            default = defaults.get(param_name, (min_val + max_val) / 2)
+
+            with dpg.group(horizontal=True, parent=self._param_container):
+                dpg.add_text(f"{param_name}:", indent=10)
+
+                slider = dpg.add_slider_float(
+                    default_value=default,
+                    min_value=min_val,
+                    max_value=max_val,
+                    width=150,
+                    format="%.4g",
+                    callback=lambda s, a, p=param_name: self._param_changed(p, a)
+                )
+                self._param_sliders[param_name] = slider
+
+                dpg.add_text(f"({units})", color=(150, 150, 150))
+
+            self._current_params[param_name] = default
+
+    def _model_changed(self, sender, app_data) -> None:
+        """Handle hazard model selection change."""
+        self._current_model = app_data
+        self._update_param_sliders(app_data)
+
+        if self._on_model_change:
+            self._on_model_change(app_data)
+
+    def _param_changed(self, param_name: str, value: float) -> None:
+        """Handle parameter slider change."""
+        self._current_params[param_name] = value
+
+        if self._on_param_change:
+            self._on_param_change(param_name, value)
+
+    def _enable_changed(self, sender, app_data) -> None:
+        """Handle enable checkbox change."""
+        self._enabled = app_data
+
+        if self._on_enable_change:
+            self._on_enable_change(app_data)
+
+    def _show_model_help(self) -> None:
+        """Show help popup for current model."""
+        tooltip = self.MODEL_TOOLTIPS.get(
+            self._current_model,
+            "No description available."
+        )
+        # Use DearPyGui's popup or just print for now
+        print(f"\n{self._current_model}:\n{tooltip}\n")
+
+    def update_hazard_display(
+        self,
+        hazard_rate: float,
+        dt_us: float = 0.1
+    ) -> None:
+        """
+        Update live hazard rate display.
+
+        Args:
+            hazard_rate: Current hazard rate in 1/µs
+            dt_us: Time step for probability calculation
+        """
+        if self._hazard_rate_text is None:
+            return
+
+        # Format hazard rate
+        if hazard_rate < 0.001:
+            rate_str = f"λ = {hazard_rate:.2e} /µs"
+        else:
+            rate_str = f"λ = {hazard_rate:.4f} /µs"
+        dpg.set_value(self._hazard_rate_text, rate_str)
+
+        # Format mean time (1/λ)
+        if self._mean_time_text is not None:
+            if hazard_rate > 0:
+                mean_time = 1.0 / hazard_rate
+                if mean_time > 1e6:
+                    mean_str = f"Mean time: {mean_time:.2e} µs"
+                elif mean_time > 100:
+                    mean_str = f"Mean time: {mean_time:.0f} µs"
+                else:
+                    mean_str = f"Mean time: {mean_time:.2f} µs"
+            else:
+                mean_str = "Mean time: ∞ (no cleavage)"
+            dpg.set_value(self._mean_time_text, mean_str)
+
+        # Compute and display rupture probability with explicit dt
+        import math
+        if hazard_rate > 0 and dt_us > 0:
+            prob = 1 - math.exp(-hazard_rate * dt_us)
+            prob_pct = prob * 100
+            if prob_pct < 0.01:
+                prob_str = f"P(rupture in Δt={dt_us:.3g} µs) = {prob_pct:.2e}%"
+            else:
+                prob_str = f"P(rupture in Δt={dt_us:.3g} µs) = {prob_pct:.3f}%"
+        else:
+            prob_str = f"P(rupture in Δt={dt_us:.3g} µs) = 0.0%"
+
+        dpg.set_value(self._rupture_prob_text, prob_str)
+
+    @property
+    def enabled(self) -> bool:
+        """Return whether enzyme is enabled."""
+        return self._enabled
+
+    @property
+    def current_model(self) -> str:
+        """Return current hazard model name."""
+        return self._current_model
+
+    @property
+    def current_params(self) -> Dict[str, float]:
+        """Return copy of current parameters."""
+        return self._current_params.copy()
+
+    def get_hazard_rate(self, strain: float, tension_pN: float) -> float:
+        """
+        Compute current hazard rate for given state.
+
+        Args:
+            strain: Current strain
+            tension_pN: Current tension in pN
+
+        Returns:
+            Hazard rate in 1/µs, or 0 if disabled
+        """
+        if not self._enabled:
+            return 0.0
+
+        try:
+            from ..enzyme_models import get_hazard
+            hazard_fn = get_hazard(self._current_model)
+            return hazard_fn(strain, tension_pN, self._current_params)
+        except Exception:
+            return 0.0
