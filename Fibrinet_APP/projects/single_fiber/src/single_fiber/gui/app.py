@@ -13,7 +13,7 @@ from pathlib import Path
 from ..config import SimulationConfig, load_config
 from .controller import ChainController, SimulationMode
 from .viewport import ChainViewport, ViewportConfig
-from .panels import StatusPanel, ControlPanel, ParameterPanel
+from .panels import StatusPanel, ControlPanel, ParameterPanel, EnzymePanel
 
 
 class SingleFiberApp:
@@ -61,6 +61,11 @@ class SingleFiberApp:
             on_time_scale=self._on_time_scale
         )
         self.param_panel = ParameterPanel()
+        self.enzyme_panel = EnzymePanel(
+            on_model_change=self._on_enzyme_model_change,
+            on_param_change=self._on_enzyme_param_change,
+            on_enable_change=self._on_enzyme_enable_change
+        )
 
         # Animation state
         self._is_running = False
@@ -73,7 +78,7 @@ class SingleFiberApp:
         dpg.create_viewport(
             title=self.title,
             width=1050,
-            height=650
+            height=850  # Taller to accommodate enzyme panel
         )
 
         # Create UI
@@ -116,6 +121,9 @@ class SingleFiberApp:
         # Parameter panel
         param_dict = self._get_param_dict()
         self.param_panel.create(param_dict)
+
+        # Enzyme panel
+        self.enzyme_panel.create()
 
     def _get_param_dict(self) -> dict:
         """Get parameter dictionary for display."""
@@ -175,6 +183,17 @@ class SingleFiberApp:
             ctrl_state.mode == SimulationMode.PLAYING
         )
 
+        # Update enzyme panel hazard display
+        if self.enzyme_panel.enabled:
+            hazard_rate = self.enzyme_panel.get_hazard_rate(
+                ctrl_state.global_strain,
+                ctrl_state.max_tension_pN
+            )
+            self.enzyme_panel.update_hazard_display(
+                hazard_rate,
+                self.config.dynamics.dt_us
+            )
+
     def _on_state_changed(self) -> None:
         """Called by controller when state changes."""
         self._update_display()
@@ -211,6 +230,21 @@ class SingleFiberApp:
     def _on_node_release(self, node_idx: int) -> None:
         """Handle node release."""
         self.controller.end_drag(node_idx)
+
+    def _on_enzyme_model_change(self, model_name: str) -> None:
+        """Handle enzyme model selection change."""
+        # Model changed - update display
+        self._update_display()
+
+    def _on_enzyme_param_change(self, param_name: str, value: float) -> None:
+        """Handle enzyme parameter change."""
+        # Parameter changed - update display
+        self._update_display()
+
+    def _on_enzyme_enable_change(self, enabled: bool) -> None:
+        """Handle enzyme enable/disable."""
+        # Update display to show/hide hazard info
+        self._update_display()
 
 
 def run_gui(config_path: Optional[str] = None, n_segments: int = 5) -> None:

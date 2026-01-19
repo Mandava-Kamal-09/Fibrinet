@@ -1,17 +1,24 @@
 """
-Enzyme cleavage interface scaffold.
+Enzyme cleavage interface.
 
-Provides a clean interface for future enzyme-strain coupling.
-NO assumed strain→cleavage relation implemented here.
+Phase 4: Strain–Enzyme Coupling Lab
+
+Provides enzyme-mechanics coupling through:
+- Abstract EnzymeInterface base class
+- Concrete implementations using hazard models from enzyme_models/
+- EnzymeState for integrated hazard tracking
 
 Interface contract:
     Input: current time, strain, tension, RNG
-    Output: hazard rate (lambda) or None
+    Output: hazard rate (lambda) in 1/µs
+
+NO modifications to frozen physics modules. This layer READS mechanical
+state but does not modify forces or node positions.
 """
 
 import numpy as np
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Dict, Any
 from .config import EnzymeConfig
 
 
@@ -93,39 +100,6 @@ class ConstantRateEnzyme(EnzymeInterface):
         return self.baseline
 
 
-class PlaceholderBellModel(EnzymeInterface):
-    """
-    Placeholder for future Bell model implementation.
-
-    NOT IMPLEMENTED - raises error if called.
-    Interface shows expected signature for future work.
-    """
-
-    def __init__(self, k0_per_us: float, beta: float):
-        """
-        Placeholder constructor.
-
-        Future Bell model: k(strain) = k0 * exp(-beta * strain)
-
-        Args:
-            k0_per_us: Base rate in 1/μs.
-            beta: Strain sensitivity (dimensionless).
-        """
-        raise NotImplementedError(
-            "Bell model not implemented in Phase 2. "
-            "This placeholder shows the expected interface."
-        )
-
-    def compute_hazard(
-        self,
-        t_us: float,
-        strain: float,
-        tension_pN: float,
-        rng: np.random.Generator
-    ) -> Optional[float]:
-        raise NotImplementedError("Bell model not implemented")
-
-
 def create_enzyme(config: EnzymeConfig) -> EnzymeInterface:
     """
     Factory function to create enzyme model from config.
@@ -197,3 +171,216 @@ class EnzymeState:
         self.H = 0.0
         self.threshold = -np.log(self.rng.random())
         self.cleaved = False
+
+
+# =============================================================================
+# Phase 4: New Hazard Model-Based Implementations
+# =============================================================================
+
+class HazardModelEnzyme(EnzymeInterface):
+    """
+    Enzyme model using registered hazard functions from enzyme_models/.
+
+    This class provides the bridge between the mechanics simulation
+    and the hazard model library, reading mechanical state and computing
+    instantaneous cleavage rates.
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        params: Dict[str, Any],
+        validate: bool = True
+    ):
+        """
+        Initialize with a named hazard model.
+
+        Args:
+            model_name: Name of hazard model (e.g., "exponential_strain")
+            params: Model parameters (e.g., {"lambda0": 0.01, "alpha": 5.0})
+            validate: Whether to validate params against schema
+
+        Raises:
+            KeyError: If model_name not in registry
+            ValueError: If params invalid (and validate=True)
+        """
+        # Import here to avoid circular import
+        from .enzyme_models import get_hazard, validate_params
+
+        if validate:
+            error = validate_params(model_name, params)
+            if error:
+                raise ValueError(f"Invalid params for '{model_name}': {error}")
+
+        self._model_name = model_name
+        self._params = params.copy()
+        self._hazard_fn = get_hazard(model_name)
+
+    @property
+    def model_name(self) -> str:
+        """Return the hazard model name."""
+        return self._model_name
+
+    @property
+    def params(self) -> Dict[str, Any]:
+        """Return a copy of the model parameters."""
+        return self._params.copy()
+
+    def compute_hazard(
+        self,
+        t_us: float,
+        strain: float,
+        tension_pN: float,
+        rng: np.random.Generator
+    ) -> Optional[float]:
+        """
+        Compute hazard rate using the registered model.
+
+        Args:
+            t_us: Current time in µs (unused by current models)
+            strain: Current engineering strain (dimensionless)
+            tension_pN: Current tension in pN
+            rng: RNG (unused - hazard functions are deterministic)
+
+        Returns:
+            Hazard rate λ in 1/µs
+        """
+        return self._hazard_fn(strain, tension_pN, self._params)
+
+
+class MultiSegmentEnzymeManager:
+    """
+    Manages enzyme state for multi-segment chains.
+
+    Each segment has its own EnzymeState for independent
+    stochastic cleavage events.
+    """
+
+    def __init__(
+        self,
+        n_segments: int,
+        enzyme: EnzymeInterface,
+        seed: int = 42
+    ):
+        """
+        Initialize manager for N segments.
+
+        Args:
+            n_segments: Number of segments in chain
+            enzyme: Enzyme interface to compute hazard rates
+            seed: Base seed (each segment gets seed + i)
+        """
+        self._enzyme = enzyme
+        self._n_segments = n_segments
+        self._seed = seed
+        self._states = [
+            EnzymeState(seed=seed + i) for i in range(n_segments)
+        ]
+        self._rupture_causes: Dict[int, str] = {}  # idx -> cause
+
+    @property
+    def n_segments(self) -> int:
+        """Return number of segments."""
+        return self._n_segments
+
+    def update_segment(
+        self,
+        segment_idx: int,
+        t_us: float,
+        strain: float,
+        tension_pN: float,
+        dt_us: float,
+        is_intact: bool
+    ) -> bool:
+        """
+        Update enzyme state for one segment.
+
+        Args:
+            segment_idx: Segment index (0-based)
+            t_us: Current time in µs
+            strain: Segment strain
+            tension_pN: Segment tension
+            dt_us: Time step
+            is_intact: Whether segment is still intact
+
+        Returns:
+            True if enzyme-induced rupture occurs this step
+        """
+        if not is_intact:
+            return False
+
+        state = self._states[segment_idx]
+        if state.cleaved:
+            return False
+
+        # Compute hazard rate
+        hazard = self._enzyme.compute_hazard(
+            t_us, strain, tension_pN, state.rng
+        )
+
+        # Update integrated hazard
+        if state.update(hazard, dt_us):
+            self._rupture_causes[segment_idx] = "enzyme"
+            return True
+
+        return False
+
+    def get_hazard_rate(
+        self,
+        segment_idx: int,
+        strain: float,
+        tension_pN: float
+    ) -> Optional[float]:
+        """
+        Get current hazard rate for a segment (for display).
+
+        Args:
+            segment_idx: Segment index
+            strain: Current strain
+            tension_pN: Current tension
+
+        Returns:
+            Hazard rate in 1/µs, or None if disabled
+        """
+        state = self._states[segment_idx]
+        return self._enzyme.compute_hazard(0.0, strain, tension_pN, state.rng)
+
+    def get_rupture_cause(self, segment_idx: int) -> Optional[str]:
+        """
+        Get cause of rupture for a segment.
+
+        Returns:
+            "enzyme" if enzyme-cleaved, None if not cleaved by enzyme
+        """
+        return self._rupture_causes.get(segment_idx)
+
+    def reset(self, seed: Optional[int] = None):
+        """Reset all enzyme states."""
+        if seed is not None:
+            self._seed = seed
+        for i, state in enumerate(self._states):
+            state.reset(self._seed + i)
+        self._rupture_causes.clear()
+
+
+def create_hazard_enzyme(
+    model_name: str,
+    params: Dict[str, Any]
+) -> EnzymeInterface:
+    """
+    Factory function to create enzyme from hazard model name.
+
+    Args:
+        model_name: Registered hazard model name
+        params: Model parameters
+
+    Returns:
+        HazardModelEnzyme instance
+
+    Example:
+        enzyme = create_hazard_enzyme(
+            "exponential_strain",
+            {"lambda0": 0.01, "alpha": 5.0}
+        )
+    """
+    return HazardModelEnzyme(model_name, params)
