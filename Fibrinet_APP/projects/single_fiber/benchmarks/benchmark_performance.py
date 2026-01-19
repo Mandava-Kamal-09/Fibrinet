@@ -6,17 +6,20 @@ Measures:
 - Scalability with segment count
 
 Usage:
-    python -m projects.single_fiber.benchmarks.benchmark_performance
+    python projects/single_fiber/benchmarks/benchmark_performance.py
 """
 
 import sys
 import time
 from pathlib import Path
 
+import numpy as np
+
 # Add project root to path
 _project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(_project_root))
 
+# Direct imports to avoid circular dependency through __init__.py
 from projects.single_fiber.src.single_fiber.config import (
     SimulationConfig, ModelConfig, HookeConfig, WLCConfig,
     GeometryConfig, DynamicsConfig, LoadingConfig
@@ -26,8 +29,6 @@ from projects.single_fiber.src.single_fiber.chain_model import ChainModel
 from projects.single_fiber.src.single_fiber.chain_integrator import (
     ChainIntegrator, ChainLoadingController
 )
-
-import numpy as np
 
 
 def create_hooke_config(n_segments: int, L0_total: float = 100.0) -> SimulationConfig:
