@@ -603,12 +603,17 @@ class Phase1EdgeSnapshot:
         if not FeatureFlags.USE_SPATIAL_PLASMIN:
             # Legacy mode: return stored S
             return float(self.S)
-        
+
+        # Spatial v2 mode: compute from plasmin_sites damage
+        if self.plasmin_sites and len(self.plasmin_sites) > 0:
+            max_damage = max(site.damage_depth for site in self.plasmin_sites)
+            return 1.0 - max_damage
+
         # Spatial v5.0 mode: compute from segments
         if self.segments is None or len(self.segments) == 0:
             # No segments initialized yet (legacy fallback)
             return float(self.S)
-        
+
         # Weakest-link: minimum intact fraction across all segments
         # Note: N_pf is a parameter; we need it to compute f_i = n_i / N_pf
         # For now, we assume S was pre-computed at initialization as min(n_i/N_pf)
@@ -653,6 +658,26 @@ class Phase1EdgeSnapshot:
         
         critical = FeatureFlags.SPATIAL_PLASMIN_CRITICAL_DAMAGE
         return any(site.damage_depth >= critical for site in self.plasmin_sites)
+
+    @property
+    def is_ruptured(self) -> bool:
+        """
+        Check if this edge is ruptured (fiber has failed).
+
+        Alias for is_cleaved for backward compatibility with test contracts.
+
+        Legacy Mode (USE_SPATIAL_PLASMIN=False):
+        - Returns True if S <= 0.0
+
+        Spatial Mode (USE_SPATIAL_PLASMIN=True):
+        - Returns True if ANY plasmin site has critical damage
+        - Critical damage = damage_depth >= FeatureFlags.SPATIAL_PLASMIN_CRITICAL_DAMAGE
+
+        Returns:
+        ========
+        bool: True if edge is ruptured, False if intact.
+        """
+        return self.is_cleaved
 
 
 class Phase1NetworkAdapter:
