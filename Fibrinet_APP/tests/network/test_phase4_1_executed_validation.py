@@ -239,7 +239,6 @@ def test_deterministic_replay_executed():
             os.unlink(csv_path)
 
 
-@pytest.mark.skip(reason="Phase 6: E1 solver reconciliation fixed but binding doesn't occur with current test parameters (needs parameter tuning)")
 def test_percolation_termination_executed():
     """
     EXECUTED TEST: Percolation-based termination.
@@ -263,16 +262,18 @@ def test_percolation_termination_executed():
             csv_path = f.name
 
         # Create single-edge network (guaranteed percolation failure)
-        # Use MODERATE k_cat0 to avoid extreme dt reduction
-        # CRITICAL: lambda_bind_total must be HUGE to overcome tiny dt_used
+        # CRITICAL FIX: Use larger sigma_site to keep S_i small, allowing larger dt_used.
+        # With sigma_site=1e-12: S_i ≈ 1.57 sites/segment → dt_cleave_safe ≈ 0.64s
+        # This allows cleavage to complete within ~250 batches.
         _create_minimal_network_csv(
             csv_path,
             num_edges=1,
-            k_cat0=0.1,  # MODERATE cleavage rate (avoids dt_used collapse)
+            sigma_site=1e-12,  # CRITICAL: Small S_i → large dt_used → fast cleavage
+            k_cat0=0.1,  # Moderate cleavage rate
             beta=0.1,  # Moderate force amplification
             P_total_quanta=50,  # Adequate plasmin supply
-            lambda_bind_total=1e6,  # HUGE rate to overcome dt_used reduction
-            n_crit_fraction=0.5,  # EASIER fracture threshold (50% damage instead of 10%)
+            lambda_bind_total=1e6,  # HUGE rate to ensure binding occurs
+            n_crit_fraction=0.5,  # EASIER fracture threshold (50% damage)
         )
 
         print("  Running simulation until termination...")

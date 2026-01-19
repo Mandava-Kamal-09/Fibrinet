@@ -4748,7 +4748,36 @@ class SimulationController:
                 remaining_edges = [e for e in adapter.edges if e.edge_id not in fractured_edge_ids]
                 adapter.set_edges(remaining_edges)
 
-                # Force redistribution: relax once after edge removal
+                # CRITICAL: Check percolation BEFORE calling relax()
+                # If network is disconnected, solver cannot satisfy boundary conditions.
+                if FeatureFlags.USE_SPATIAL_PLASMIN:
+                    from ...managers.edge_evolution_engine import EdgeEvolutionEngine
+                    left_boundary_ids = set(adapter.left_boundary_node_ids)
+                    right_boundary_ids = set(adapter.right_boundary_node_ids)
+                    is_connected = EdgeEvolutionEngine.check_percolation(
+                        edges=adapter.edges,
+                        left_boundary_ids=left_boundary_ids,
+                        right_boundary_ids=right_boundary_ids,
+                        node_coords=adapter.render_node_coords,
+                    )
+                    if not is_connected:
+                        # Network percolation failure: terminate immediately
+                        reason = "network_percolation_failure"
+                        batch_index = int(len(adapter.experiment_log))
+                        time_val = float(self.state.time)
+                        cleaved_edges_total = len(adapter.fractured_history)
+                        total_edges = len(adapter.edges) + cleaved_edges_total
+                        cleavage_fraction = float(cleaved_edges_total) / max(1, float(total_edges))
+                        adapter.termination_reason = str(reason)
+                        adapter.termination_batch_index = int(batch_index)
+                        adapter.termination_time = float(time_val)
+                        adapter.termination_cleavage_fraction = float(cleavage_fraction)
+                        print(f"[ResearchSimulation] Network percolation failure at batch {batch_index} — terminating (early check)")
+                        self.state.is_running = False
+                        self.state.is_paused = False
+                        return False
+
+                # Force redistribution: relax once after edge removal (only if still connected)
                 adapter.relax(float(self.state.strain_value))
 
         # Phase 2.6: build local neighborhood mapping once (no persistent graph state).
