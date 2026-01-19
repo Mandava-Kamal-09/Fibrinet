@@ -1,0 +1,34 @@
+# Single Fiber Simulation - Hookean Spring Example
+# ================================================
+# Units: nm, pN, μs, pN·nm
+
+model:
+  law: hooke
+  hooke:
+    k_pN_per_nm: 0.1      # Spring constant (pN/nm)
+    L0_nm: 100.0          # Rest length (nm)
+    extension_only: true  # No compression forces
+
+geometry:
+  x1_nm: [0.0, 0.0, 0.0]      # Fixed node position
+  x2_nm: [100.0, 0.0, 0.0]    # Initial free node position
+
+dynamics:
+  dt_us: 0.1                  # Time step (μs)
+  gamma_pN_us_per_nm: 1.0     # Drag coefficient
+  relax_steps_per_increment: 1
+
+loading:
+  mode: displacement_ramp
+  axis: [1.0, 0.0, 0.0]       # Pull along x-axis
+  v_nm_per_us: 0.5            # Velocity (nm/μs)
+  t_end_us: 100.0             # Total time (μs)
+  constraint: hard            # Hard position constraint
+
+enzyme:
+  enabled: false
+
+output:
+  out_dir: output
+  run_name: hooke_ramp
+  save_every_steps: 10
