@@ -446,8 +446,9 @@ class PlasminManager:
         import hashlib
 
         # Derive deterministic site_id from input seed + identifiers
+        # Constrain to uint32 range [0, 2^32-1] for np.random.RandomState compatibility
         site_seed_material = f"{rng_seed}|site|{edge_id}|{site_index}|{batch_index}"
-        site_seed = int(hashlib.sha256(site_seed_material.encode("utf-8")).hexdigest()[:16], 16)
+        site_seed = int(hashlib.sha256(site_seed_material.encode("utf-8")).hexdigest()[:16], 16) % (2**32)
         rng_for_site = np.random.RandomState(site_seed)
 
         # Parametric position uniformly distributed on [0, 1]
@@ -461,11 +462,11 @@ class PlasminManager:
             site_id=site_id,
             edge_id=edge_id,
             position_parametric=position_parametric,
-            position_world_x=float("nan"),  # TBD: filled when edge is loaded with coords
-            position_world_y=float("nan"),
+            position_world_x=0.0,  # Placeholder; updated when edge coords available
+            position_world_y=0.0,  # Placeholder; updated when edge coords available
             damage_depth=0.0,  # Initial damage is zero
             binding_batch_index=int(batch_index),
-            binding_time=None,  # TBD: set when binding occurs
+            binding_time=0.0,  # Placeholder; updated when binding time is known
             rng_seed_for_position=int(site_seed),
         )
 

@@ -212,7 +212,6 @@ class TestEdgeEvolutionEngineLegacyBypass:
 class TestEdgeEvolutionEngineSpatialPath:
     """Verify spatial path (feature flag ON) works correctly."""
 
-    @pytest.mark.skip(reason="Phase 5.5: Seed computation overflows 2^32-1 in PlasminManager._create_binding_site")
     def test_spatial_path_produces_results(self):
         """Spatial path should produce EdgeEvolutionResult without errors."""
         FeatureFlags.enable_spatial_plasmin()
