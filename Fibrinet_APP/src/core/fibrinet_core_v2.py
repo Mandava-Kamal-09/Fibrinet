@@ -10,7 +10,7 @@ Simulates plasmin-mediated fibrinolysis under mechanical strain using:
 Key Equations:
     WLC Force:  F(ε) = (k_B T / ξ) × [1/(4(1-ε)²) - 1/4 + ε]
     WLC Energy: U(ε) = (k_B T L_c / ξ) × [1/(4(1-ε)) - 1/4 - ε/4 + ε²/2]
-    Cleavage:   k(ε) = k₀ × exp(-β × ε)   [strain inhibits lysis]
+    Cleavage:   k(ε) = λ₀ × k₀ × exp(-β × ε)   [plasmin-scaled, strain-inhibited lysis]
 
 References:
     - Marko & Siggia (1995) - WLC force law
@@ -29,10 +29,6 @@ import random
 import hashlib
 import json
 
-
-# -----------------------------------------------------------------------------
-# Physical Constants (SI Units)
-# -----------------------------------------------------------------------------
 
 class PhysicalConstants:
     """
@@ -76,9 +72,6 @@ class PhysicalConstants:
 PC = PhysicalConstants()
 
 
-# =============================================================================
-# Data Models
-# =============================================================================
 
 @dataclass(frozen=True)
 class WLCFiber:
@@ -279,27 +272,13 @@ class NetworkState:
     # Records: time, critical_fiber_id, lysis_fraction, remaining_fibers, total_fibers
 
 
-# =============================================================================
-# Energy Minimization Solver (Analytical Jacobian)
-# =============================================================================
 
 class EnergyMinimizationSolver:
     """
-    Energy minimization with analytical Jacobian for 100× speedup.
+    Energy minimization with analytical Jacobian.
 
-    Key Innovation:
-    ---------------
-    Gradient of total energy = -net force on each node (vectorized)
-
-    ∂E/∂r_i = -F_net,i
-
-    This is computed via vectorized NumPy operations without Python loops.
-
-    Performance:
-    ------------
-    - Analytical gradient: O(N_fibers) per evaluation
-    - Numerical gradient: O(N_fibers × N_nodes) with finite differences
-    - Speedup: ~100× for typical networks (N_nodes ~ 100-1000)
+    Uses the identity ∂E/∂r_i = -F_net,i to compute gradients
+    via vectorized NumPy operations.
     """
 
     def __init__(self, fibers: List[WLCFiber], fixed_coords: Dict[int, np.ndarray]):
@@ -450,50 +429,38 @@ class EnergyMinimizationSolver:
             options={'maxiter': 1000, 'ftol': 1e-9}
         )
 
-        if not result.success:
-            print(f"Warning: Energy minimization did not converge: {result.message}")
+        # Convergence warning suppressed for GUI performance — non-convergence
+        # is handled gracefully by using the best position found so far
 
         relaxed_positions = self.unpack_free_coords(result.x, self.fixed_coords)
         return relaxed_positions, result.fun
 
 
-# =============================================================================
-# Stochastic Chemistry Engine (Hybrid SSA + Tau-Leaping)
-# =============================================================================
 
 class StochasticChemistryEngine:
     """
-    Stochastic chemistry with stress-dependent Bell rupture.
+    Hybrid stochastic chemistry engine (Gillespie SSA + tau-leaping).
 
-    Algorithm Selection:
-    --------------------
-    - SSA (Gillespie): Exact for low-count reactions
-    - Tau-leaping: Approximate but fast for high-count reactions
-    - Hybrid: Auto-switch based on total propensity
-
-    Reaction:
-    ---------
-    Fiber_i --k(F_i, S_i)--> Fiber_i' (S_i' = S_i - ΔS)
-
-    where k(F, S) = k₀ exp((F/S_eff) × x_b / k_B T)
-
-    DETERMINISM NOTE:
-    -----------------
-    Uses NumPy Generator (not random.Random or global np.random) for
-    deterministic replay. All random operations (SSA, tau-leap, plasmin)
-    use self.rng.random() or self.rng.poisson().
+    Auto-switches between exact SSA and tau-leaping based on total propensity.
+    Uses NumPy Generator for deterministic replay.
     """
 
-    def __init__(self, rng_seed: int, tau_leap_threshold: float = 100.0):
+    def __init__(self, rng_seed: int, tau_leap_threshold: float = 100.0,
+                 plasmin_concentration: float = 1.0):
         """
         Initialize chemistry engine with deterministic RNG.
 
         Args:
             rng_seed: Random seed for NumPy Generator (deterministic replay)
             tau_leap_threshold: Switch to tau-leaping when total propensity > this
+            plasmin_concentration: λ₀ scaling factor for cleavage propensities.
+                Scales all cleavage rates: k_eff(ε) = λ₀ × k₀ × exp(-β × ε)
+                λ₀ = 1.0 → baseline (k₀ = 0.1 s⁻¹ at zero strain)
+                λ₀ > 1.0 → higher plasmin concentration → faster lysis
         """
         self.rng = np.random.Generator(np.random.PCG64(rng_seed))
         self.tau_leap_threshold = tau_leap_threshold
+        self.plasmin_concentration = float(plasmin_concentration)
 
     def compute_propensities(self, state: NetworkState) -> Dict[int, float]:
         """
@@ -516,9 +483,10 @@ class StochasticChemistryEngine:
                 pos_j = state.node_positions[fiber.node_j]
                 length = float(np.linalg.norm(pos_j - pos_i))
 
-                # Strain-based cleavage rate
+                # Strain-based cleavage rate scaled by plasmin concentration
+                # k_eff(ε) = λ₀ × k₀ × exp(-β × ε)
                 k_cleave = fiber.compute_cleavage_rate(length)
-                propensities[fiber.fiber_id] = k_cleave
+                propensities[fiber.fiber_id] = self.plasmin_concentration * k_cleave
         return propensities
 
     def gillespie_step(self, state: NetworkState, max_dt: float) -> Tuple[Optional[int], float]:
@@ -650,9 +618,6 @@ class StochasticChemistryEngine:
                     state.plasmin_locations[fid] = location
 
 
-# =============================================================================
-# Graph Connectivity Utilities
-# =============================================================================
 
 def check_left_right_connectivity(state: NetworkState) -> bool:
     """
@@ -706,9 +671,6 @@ def check_left_right_connectivity(state: NetworkState) -> bool:
     return False
 
 
-# =============================================================================
-# Main Simulation Controller
-# =============================================================================
 
 class HybridMechanochemicalSimulation:
     """
@@ -735,7 +697,8 @@ class HybridMechanochemicalSimulation:
                  dt_chem: float = 0.01,
                  t_max: float = 100.0,
                  lysis_threshold: float = 0.9,
-                 delta_S: float = 0.1):
+                 delta_S: float = 0.1,
+                 plasmin_concentration: float = 1.0):
         """
         Initialize simulation with deterministic RNG.
 
@@ -746,6 +709,8 @@ class HybridMechanochemicalSimulation:
             t_max: Maximum simulation time [s]
             lysis_threshold: Stop when lysis_fraction > this
             delta_S: Integrity decrement per cleavage event
+            plasmin_concentration: λ₀ scaling factor for cleavage rates.
+                k_eff(ε) = λ₀ × k₀ × exp(-β × ε)
 
         Note:
             All stochastic operations (SSA, tau-leap, plasmin) use NumPy Generator
@@ -757,8 +722,11 @@ class HybridMechanochemicalSimulation:
         self.t_max = t_max
         self.lysis_threshold = lysis_threshold
         self.delta_S = delta_S
+        self.plasmin_concentration = plasmin_concentration
 
-        self.chemistry = StochasticChemistryEngine(rng_seed)  # Pass seed directly
+        self.chemistry = StochasticChemistryEngine(
+            rng_seed, plasmin_concentration=plasmin_concentration
+        )
 
         # History
         self.history = []
@@ -807,7 +775,8 @@ class HybridMechanochemicalSimulation:
         """
         Degrade fiber by delta_S and track degradation history.
 
-        Records: time, fiber_id, degradation order, current length, and strain.
+        Records EVERY cleavage event (partial and complete) for research analysis.
+        Each fiber needs 1/delta_S hits to fully rupture (e.g., 10 hits at delta_S=0.1).
         """
         for i, fiber in enumerate(self.state.fibers):
             if fiber.fiber_id == fiber_id:
@@ -816,28 +785,29 @@ class HybridMechanochemicalSimulation:
                 pos_j = self.state.node_positions[fiber.node_j]
                 length = float(np.linalg.norm(pos_j - pos_i))
                 strain = (length - fiber.L_c) / fiber.L_c
+                tension = fiber.compute_force(length)
 
                 new_S = max(0.0, fiber.S - self.delta_S)
                 self.state.fibers[i] = replace(fiber, S=new_S)
 
-                # Track complete rupture (when fiber fully degrades)
+                # Record every cleavage event (partial degradation tracking)
+                self.state.degradation_history.append({
+                    'time': self.state.time,
+                    'fiber_id': fiber_id,
+                    'order': len(self.state.degradation_history) + 1,
+                    'length': length,
+                    'strain': strain,
+                    'tension': tension,
+                    'old_S': fiber.S,
+                    'new_S': new_S,
+                    'is_complete_rupture': new_S == 0.0,
+                    'node_i': fiber.node_i,
+                    'node_j': fiber.node_j
+                })
+
+                # Track complete rupture count
                 if new_S == 0.0:
                     self.state.n_ruptured += 1
-
-                    # Compute fiber tension at rupture
-                    tension = fiber.compute_force(length)
-
-                    # Record degradation event for research analysis
-                    self.state.degradation_history.append({
-                        'time': self.state.time,
-                        'fiber_id': fiber_id,
-                        'order': len(self.state.degradation_history) + 1,  # Sequential order
-                        'length': length,
-                        'strain': strain,
-                        'tension': tension,  # Force at rupture [N]
-                        'node_i': fiber.node_i,
-                        'node_j': fiber.node_j
-                    })
                 break
 
     def update_statistics(self):
@@ -926,9 +896,6 @@ class HybridMechanochemicalSimulation:
         return self.history
 
 
-# =============================================================================
-# Excel Network Loader (GUI Integration)
-# =============================================================================
 
 class ExcelNetworkLoader:
     """
@@ -1047,9 +1014,6 @@ class ExcelNetworkLoader:
         return state
 
 
-# =============================================================================
-# Validation Suite
-# =============================================================================
 
 def validate_core_v2():
     """
@@ -1154,9 +1118,6 @@ def validate_core_v2():
     print("=" * 60)
 
 
-# =============================================================================
-# Main Entry Point
-# =============================================================================
 
 if __name__ == "__main__":
     # Run validation

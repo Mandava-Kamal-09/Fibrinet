@@ -45,7 +45,7 @@ class CanvasManager:
         Logger.log("Drawing network...")
         self.clear_canvas()
         self.current_network = network  # Store for redrawing
-        Logger.log(f"--------------")
+        Logger.log("Drawing network details")
         network.log_network()
 
         if not network.nodes:
@@ -104,13 +104,6 @@ class CanvasManager:
             self.node_drawings[node_id] = node
 
 
-        #     # Add label at the center of the node
-        #     label_id = self.canvas.create_text(x, y, text=str(node.n_id), fill="white", font=("Arial", 10, "bold"))
-        #     self.node_labels[node_id] = label_id  # Store label ID
-
-                
-        # # Draw axes
-        # self.draw_axes(width, height, scale, offset_x, offset_y, max_x, max_y)
         Logger.log("end draw_2d_network(self, network)")
 
     def draw_axes(self, width, height, scale, offset_x, offset_y, max_x, max_y):

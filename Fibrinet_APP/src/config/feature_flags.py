@@ -25,7 +25,6 @@ class FeatureFlags:
     of deterministic replay or existing experiment logs.
     """
     
-    # Spatial Plasmin Model (Phase 0-6 feature)
     USE_SPATIAL_PLASMIN = False
     """
     Enable spatial plasmin binding and localized damage accumulation.
@@ -66,12 +65,10 @@ class FeatureFlags:
     
     When True:
     - Multiple plasmin sites possible per edge
-    - Cooperative cutting models (Phase 2 enhancement)
+    - Cooperative cutting models
     
     Default: False (single plasmin per edge)
     """
-    
-    # --- Static Methods for Safe Flag Management ---
     
     @classmethod
     def enable_spatial_plasmin(cls):
@@ -88,7 +85,7 @@ class FeatureFlags:
         """Reset all flags to legacy defaults."""
         cls.USE_SPATIAL_PLASMIN = False
         cls.ALLOW_MULTIPLE_PLASMIN_PER_EDGE = False
-        cls.SPATIAL_PLASMIN_CRITICAL_DAMAGE = 0.7  # Phase 5.5: reset to documented default
+        cls.SPATIAL_PLASMIN_CRITICAL_DAMAGE = 0.7
     
     @classmethod
     def validate(cls) -> bool:

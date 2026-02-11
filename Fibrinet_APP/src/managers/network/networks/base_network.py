@@ -23,7 +23,7 @@ class BaseNetwork:
             "edge_attributes": self.allowed_edge_type.get_schema(),
         }
 
-        Logger.log("===== Network Properties =====")
+        Logger.log("Network Properties:")
         Logger.log("Nodes:")
         for node in self.nodes:
             Logger.log(f"{node.__dict__}")
@@ -183,7 +183,7 @@ class BaseNetwork:
     
     def log_network(self):
         """Logs the current state of the network: nodes, edges, and metadata."""
-        Logger.log("===== Network State =====")
+        Logger.log("Network State:")
         
         Logger.log("Nodes:")
         for node in self.nodes:

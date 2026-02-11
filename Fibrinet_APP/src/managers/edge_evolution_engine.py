@@ -1,5 +1,5 @@
 """
-Phase 3: EdgeEvolutionEngine
+EdgeEvolutionEngine
 
 Pure orchestration engine for edge evolution within a single batch.
 
@@ -193,7 +193,7 @@ class EdgeEvolutionEngine:
         - Determinism verified via input -> output mapping stability
         """
         if FeatureFlags.USE_SPATIAL_PLASMIN:
-            # Spatial path (Phase 2+)
+            # Spatial path
             return EdgeEvolutionEngine._evolve_edges_spatial(
                 edges=edges,
                 forces_by_edge_id=forces_by_edge_id,
@@ -327,7 +327,7 @@ class EdgeEvolutionEngine:
             if S_old > 0.0:
                 F = float(forces_by_edge_id.get(e.edge_id, 0.0))
 
-                # Plastic rest-length update (Phase 2.3)
+                # Plastic rest-length update
                 if F > plastic_F_threshold:
                     dL = plastic_rate * (F - plastic_F_threshold) * dt
                     L_eff = L_eff + float(dL)
@@ -468,7 +468,7 @@ class EdgeEvolutionEngine:
         - Legacy S field unchanged for compatibility with exporters/visualization
 
         This path is NOT YET integrated with advance_one_batch(); it's
-        a pure algorithm demonstration (Phase 3 preview).
+        a pure algorithm demonstration.
         """
         from src.views.tkinter_view.research_simulation_page import Phase1EdgeSnapshot
 

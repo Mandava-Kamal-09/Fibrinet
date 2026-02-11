@@ -2,7 +2,6 @@ import tkinter as tk
 from utils.logger.logger import Logger
 
 class ToolbarManager:
-    # ----- TOOLBAR MANAGEMENT -----
     def __init__(self, new_network_page):
         """
         Initializes the ToolbarManager with action and info bars.
@@ -71,9 +70,6 @@ class ToolbarManager:
         container = self.toolbar_frame.master
         self.place_side_bar(container)
         Logger.log("end update_toolbar_sizes(self, event)")
-
-    # ----- SIDE BAR -----
-    # ----- LAYOUT & SETUP -----
     def place_side_bar(self, container):
         Logger.log("start place_side_bar(self, container)")
         Logger.log("PLACE SIDE BAR")
@@ -108,8 +104,6 @@ class ToolbarManager:
         self.display_network_selector(container)
         
         Logger.log("end setup_side_bar(self)")
-
-    # ----- NETWORK SELECTION -----
     def display_network_selector(self, container):
             Logger.log("start add_side_bar_buttons")
 
@@ -340,8 +334,6 @@ class ToolbarManager:
         Logger.log(f"Edge schema: {self.edge_schema}")
 
         self.display_network_builder_menu()
-
-    # ----- NETWORK BUILDER MENU -----
     def display_network_builder_menu(self):
         Logger.log("start display_network_builder()")
         # Clear the sidebar
@@ -398,8 +390,6 @@ class ToolbarManager:
 
 
         Logger.log("end display_network_builder()")
-
-    # ----- META DATA MANAGEMENT -----
     def display_edit_meta_data(self):
         Logger.log("start display_edit_meta_data()")
         for widget in self.side_bar.winfo_children():
@@ -543,8 +533,6 @@ class ToolbarManager:
 
         # Go back to menu
         self.display_network_builder_menu()
-
-    # ----- NODE MANAGEMENT -----
     def display_add_node(self):
         Logger.log("start display_add_node()")
 
@@ -660,9 +648,6 @@ class ToolbarManager:
             add_method=self.new_network_page.view.controller.add_node,
             element_name="node"
         )
-
-
-    # ----- EDGE MANAGEMENT -----
     def display_add_edge(self):
         Logger.log("start display_add_edge()")
         for widget in self.side_bar.winfo_children():
@@ -776,8 +761,6 @@ class ToolbarManager:
             add_method=self.new_network_page.view.controller.add_edge,
             element_name="edge"
         )
-
-    # ----- RELAX NETWORK -----
     def relax_network(self):
         Logger.log("start toolbar relax_network()")
         if self.new_network_page.view.controller.network_manager.network:
@@ -786,8 +769,6 @@ class ToolbarManager:
         else:
             self.update_info_bar("No network to relax")
         Logger.log("end toolbar relax_network()")
-
-    # ----- HELPERS -----
     def to_list(self, obj):
         if obj is None:
             return []
@@ -796,8 +777,6 @@ class ToolbarManager:
         if isinstance(obj, (list, set, tuple)):
             return list(obj)
         return [obj]  # fallback for single item
-
-    # ----- ACTION BAR -----
     def setup_action_bar(self, controller):
         """Creates the action bar and populates it with buttons."""
         Logger.log(f"start setup_action_bar(self)")
@@ -872,8 +851,6 @@ class ToolbarManager:
             Logger.log("button found")
             self.buttons[button_name].config(state=tk.DISABLED)
         Logger.log(f"end disable_action_bar_button(self, button_name)")
-
-    # ----- BUTTON ACTIONS -----
     def on_import_click(self):
         Logger.log(f"start on_import_click(self)")
         self.new_network_page.on_import()
@@ -902,8 +879,6 @@ class ToolbarManager:
         self.new_network_page.on_export()
         self.update_info_bar("Network exported successfully")
         Logger.log(f"end on_export_click(self)")
-
-    # ----- INFO BAR -----
     def setup_info_bar(self):
         """Creates the info bar with larger, centered, and wrapped text."""
         Logger.log(f"start setup_info_bar(self)")

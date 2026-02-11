@@ -37,8 +37,6 @@ class ToolbarManager:
         self.action_bar.place(x=0, y=0, relwidth=0.65, height=self.toolbar_height)  # 65% width
         self.info_bar.place(relx=0.65, y=0, relwidth=0.35, height=self.toolbar_height)  # 35% width
         Logger.log(f"end update_toolbar_sizes(self, event)")
-
-    # ----- ACTION BAR -----
     def setup_action_bar(self, controller):
         """Creates the action bar and populates it with buttons."""
         Logger.log(f"start setup_action_bar(self)")
@@ -113,8 +111,6 @@ class ToolbarManager:
             Logger.log("button found")
             self.buttons[button_name].config(state=tk.DISABLED)
         Logger.log(f"end disable_action_bar_button(self, button_name)")
-
-    # ----- BUTTON ACTIONS -----
     def on_import_click(self):
         Logger.log(f"start on_import_click(self)")
         self.modify_page.on_import()
@@ -143,8 +139,6 @@ class ToolbarManager:
         self.modify_page.on_export()
         self.update_info_bar("Network exported successfully")
         Logger.log(f"end on_export_click(self)")
-
-    # ----- INFO BAR -----
     def setup_info_bar(self):
         """Creates the info bar with larger, centered, and wrapped text."""
         Logger.log(f"start setup_info_bar(self)")

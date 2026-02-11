@@ -1,7 +1,7 @@
 """
-Phase 2: PlasminManager
+PlasminManager
 
-Encapsulates ALL spatial plasmin binding and damage accumulation logic.
+Encapsulates all spatial plasmin binding and damage accumulation logic.
 
 Responsibilities:
 - Deterministic plasmin binding site creation
@@ -111,7 +111,7 @@ class PlasminManager:
         rng_seed: int,
     ) -> Any:
         """
-        Phase 2.1: Create initial binding sites for a newly-loaded or newly-damaged edge.
+        Create initial binding sites for a newly-loaded or newly-damaged edge.
 
         Preconditions:
         - edge_snapshot must be Phase1EdgeSnapshot (v1 or v2)
@@ -177,7 +177,7 @@ class PlasminManager:
         damage_rate: float = None,
     ) -> PlasminDamageResult:
         """
-        Phase 2.2: Apply damage accumulation to existing binding sites.
+        Apply damage accumulation to existing binding sites.
 
         Preconditions:
         - edge_snapshot must be Phase1EdgeSnapshot (v1 or v2)
@@ -271,7 +271,7 @@ class PlasminManager:
         critical_damage_fraction: float = None,
     ) -> bool:
         """
-        Phase 2.3: Query whether an edge has reached critical severance.
+        Query whether an edge has reached critical severance.
 
         Preconditions:
         - edge_snapshot must be Phase1EdgeSnapshot (v1 or v2)
@@ -318,7 +318,7 @@ class PlasminManager:
         allow_multiple: bool = False,
     ) -> dict[Any, list[PlasminBindingSite]]:
         """
-        Phase 2.4: Deterministically select which intact edges receive plasmin attacks.
+        Deterministically select which intact edges receive plasmin attacks.
 
         Preconditions:
         - intact_edges: sequence of Phase1EdgeSnapshot objects with S > 0
@@ -327,7 +327,7 @@ class PlasminManager:
         - batch_index: current batch number (for deterministic seeding)
         - rng_seed: frozen RNG seed (for deterministic sampling)
         - beta, gamma_d: degradation exponents for attack weighting
-        - allow_multiple: if True, allow multiple sites per edge (Phase 2+); else at most one
+        - allow_multiple: if True, allow multiple sites per edge; else at most one
 
         Returns:
         - dict[edge_id -> list[PlasminBindingSite]]: new binding sites to create this batch

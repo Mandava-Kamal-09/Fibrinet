@@ -50,9 +50,6 @@ except ModuleNotFoundError:
     from src.managers.network.relaxed_network_solver import RelaxedNetworkSolver
 
 
-# =============================================================================
-# Legacy Interface Compatibility Classes
-# =============================================================================
 
 @dataclass
 class Phase1EdgeSnapshot:
@@ -76,9 +73,6 @@ class Phase1EdgeSnapshot:
     segments: Optional[tuple] = None  # Spatial plasmin (not used in Core V2)
 
 
-# =============================================================================
-# Core V2 GUI Adapter
-# =============================================================================
 
 class CoreV2GUIAdapter:
     """
@@ -121,6 +115,7 @@ class CoreV2GUIAdapter:
         self.lambda_0: float = 1.0  # Plasmin concentration (mapped to k_cat_0)
         self.dt: float = 0.01  # Timestep [s]
         self.applied_strain: float = 0.1
+        self.strain_mode: str = "boundary_only"  # "boundary_only" or "affine"
         self.max_time: float = 100.0  # [s]
 
         # Legacy compatibility fields
@@ -140,10 +135,6 @@ class CoreV2GUIAdapter:
         self._relaxed_network_solver: RelaxedNetworkSolver = RelaxedNetworkSolver()
         self._relaxed_state_cache: Optional[Dict[str, Any]] = None
         self._percolation_lost: bool = False
-
-    # =========================================================================
-    # Excel Loading (Core V2 Integration)
-    # =========================================================================
 
     def load_from_excel(self, excel_path: str, use_existing_parser: bool = True) -> bool:
         """
@@ -284,14 +275,16 @@ class CoreV2GUIAdapter:
         except Exception as e:
             raise ValueError(f"Failed to load Excel file: {e}")
 
-    def _create_core_v2_state(self, applied_strain: float) -> NetworkState:
+    def _create_core_v2_state(self, applied_strain: float, strain_mode: str = "boundary_only") -> NetworkState:
         """
         Create Core V2 NetworkState from loaded Excel data.
 
         This converts raw Excel data to WLCFiber objects with proper units.
 
         Args:
-            applied_strain: Strain to apply to right boundary
+            applied_strain: Strain to apply
+            strain_mode: "boundary_only" (right boundary nodes only) or
+                         "affine" (all nodes displaced proportionally to x-position)
 
         Returns:
             NetworkState ready for simulation
@@ -321,14 +314,26 @@ class CoreV2GUIAdapter:
             L_c = length_orig / (1.0 + PC.PRESTRAIN)
             fiber_rest_lengths[eid] = L_c
 
-        # NOW apply strain to right boundary (for simulation boundary conditions)
+        # NOW apply strain (for simulation boundary conditions)
         node_positions_si = {nid: pos.copy() for nid, pos in node_positions_si_original.items()}
         x_coords = [pos[0] for pos in node_positions_si.values()]
         x_min, x_max = min(x_coords), max(x_coords)
         x_span = x_max - x_min
 
-        for nid in self.right_boundary_node_ids:
-            node_positions_si[nid][0] += applied_strain * x_span
+        if strain_mode == "affine":
+            # Affine deformation: displace ALL nodes proportionally to x-position
+            # x_new = x_old + applied_strain * (x_old - x_min) / x_span * x_span
+            # Left boundary (x=x_min): no displacement. Right boundary (x=x_max): full displacement.
+            if x_span > 0:
+                for nid, pos in node_positions_si.items():
+                    fractional_position = (pos[0] - x_min) / x_span
+                    pos[0] += applied_strain * fractional_position * x_span
+            print(f"[Core V2] Applied affine strain {applied_strain} to all {len(node_positions_si)} nodes")
+        else:
+            # Legacy boundary-only: only displace right boundary nodes
+            for nid in self.right_boundary_node_ids:
+                node_positions_si[nid][0] += applied_strain * x_span
+            print(f"[Core V2] Applied boundary-only strain {applied_strain} to {len(self.right_boundary_node_ids)} right boundary nodes")
 
         # Fixed boundary conditions (rigid grips)
         fixed_nodes = {}
@@ -375,16 +380,13 @@ class CoreV2GUIAdapter:
 
         return state
 
-    # =========================================================================
-    # Parameter Configuration (GUI Interface)
-    # =========================================================================
-
     def configure_parameters(self,
                             plasmin_concentration: float,
                             time_step: float,
                             max_time: float,
                             applied_strain: float,
-                            rng_seed: int = 0):
+                            rng_seed: int = 0,
+                            strain_mode: str = "boundary_only"):
         """
         Configure simulation parameters from GUI.
 
@@ -397,6 +399,7 @@ class CoreV2GUIAdapter:
             time_step: Δt [s] - GUI-only
             max_time: Maximum simulation time [s] - GUI-only
             applied_strain: Strain to apply - GUI-only
+            strain_mode: "boundary_only" (right boundary only) or "affine" (all fibers)
         """
         # Validate
         if plasmin_concentration <= 0:
@@ -413,16 +416,14 @@ class CoreV2GUIAdapter:
         self.max_time = float(max_time)
         self.applied_strain = float(applied_strain)
         self.rng_seed = int(rng_seed)
+        self.strain_mode = strain_mode if strain_mode in ("boundary_only", "affine") else "boundary_only"
 
         print(f"Parameters configured:")
         print(f"  lambda_0 (plasmin) = {self.lambda_0}")
         print(f"  dt = {self.dt} s")
         print(f"  t_max = {self.max_time} s")
         print(f"  strain = {self.applied_strain}")
-
-    # =========================================================================
-    # Simulation Control
-    # =========================================================================
+        print(f"  strain_mode = {self.strain_mode}")
 
     def start_simulation(self):
         """
@@ -434,16 +435,17 @@ class CoreV2GUIAdapter:
             raise ValueError("No network loaded. Call load_from_excel() first.")
 
         # Create Core V2 state
-        self.network_state = self._create_core_v2_state(self.applied_strain)
+        self.network_state = self._create_core_v2_state(self.applied_strain, self.strain_mode)
 
-        # Initialize simulation
+        # Initialize simulation with plasmin concentration scaling
         self.simulation = HybridMechanochemicalSimulation(
             initial_state=self.network_state,
             rng_seed=getattr(self, 'rng_seed', 0),  # Use configured seed or default to 0
             dt_chem=min(self.dt, 0.005),  # Cap at 0.005s to prevent force singularities
             t_max=self.max_time,
             lysis_threshold=0.9,
-            delta_S=0.1  # Integrity decrement per cleavage
+            delta_S=0.1,  # Integrity decrement per cleavage
+            plasmin_concentration=getattr(self, 'lambda_0', 1.0)  # λ₀ from GUI
         )
 
         # Reset experiment log
@@ -494,10 +496,6 @@ class CoreV2GUIAdapter:
         if forces:
             self.prev_mean_tension = float(np.mean(list(forces.values())))
             self.prev_max_tension = float(max(forces.values()))
-
-    # =========================================================================
-    # Data Export (GUI Interface)
-    # =========================================================================
 
     def get_edges(self) -> List[Phase1EdgeSnapshot]:
         """
@@ -591,10 +589,6 @@ class CoreV2GUIAdapter:
         if self.prev_max_tension is None:
             return 0.0
         return self.prev_max_tension
-
-    # =========================================================================
-    # Publication-Grade Metadata (Peer Review Defense)
-    # =========================================================================
 
     def get_simulation_metadata(self) -> Dict[str, Any]:
         """
@@ -693,6 +687,7 @@ class CoreV2GUIAdapter:
                 "dt": self.dt,  # Timestep [s]
                 "max_time": self.max_time,  # Maximum time [s]
                 "applied_strain": self.applied_strain,  # Applied strain
+                "strain_mode": self.strain_mode,  # "boundary_only" or "affine"
                 "coord_to_m": self.coord_to_m,  # Coordinate unit conversion [m/unit]
                 "thickness_to_m": self.thickness_to_m,  # Thickness unit conversion [m/unit]
                 "delta_S": self.simulation.delta_S if self.simulation else None,  # Integrity decrement per cleavage
@@ -781,10 +776,6 @@ class CoreV2GUIAdapter:
         print(f"  Total fibers cleaved: {len(self.simulation.state.degradation_history)}")
         print(f"  Clearance time: {self.simulation.state.time:.2f}s")
 
-    # =========================================================================
-    # Legacy Compatibility Methods
-    # =========================================================================
-
     def relax(self, strain: float):
         """
         Relax network to mechanical equilibrium (legacy interface).
@@ -798,14 +789,6 @@ class CoreV2GUIAdapter:
     def configure_existing_solver_relaxation(self):
         """Legacy compatibility method (no-op in Core V2)."""
         pass
-
-    # =========================================================================
-    # GUI Rendering Support (Catches B & C Mitigation)
-    # =========================================================================
-
-    # =========================================================================
-    # Relaxed Network State (Post-Percolation Visualization)
-    # =========================================================================
 
     def check_percolation_status(self) -> bool:
         """
@@ -1080,11 +1063,12 @@ class CoreV2GUIAdapter:
         # Node positions in abstract units
         nodes_abstract = self.get_node_positions()
 
-        # Edge states and strains
+        # Edge states, strains, and integrity
         edges = []
         intact_edges = []
         ruptured_edges = []
         strains = {}  # {fiber_id: strain} for visualization
+        integrity = {}  # {fiber_id: S} for degradation visualization
 
         for fiber in self.simulation.state.fibers:
             # Skip fibers with missing nodes (can happen during network evolution)
@@ -1094,6 +1078,9 @@ class CoreV2GUIAdapter:
 
             is_ruptured = (fiber.S == 0.0)
             edges.append((fiber.fiber_id, fiber.node_i, fiber.node_j, is_ruptured))
+
+            # Store fiber integrity for degradation visualization
+            integrity[fiber.fiber_id] = fiber.S
 
             # Compute current fiber strain for visualization
             pos_i = self.simulation.state.node_positions[fiber.node_i]
@@ -1107,21 +1094,27 @@ class CoreV2GUIAdapter:
             else:
                 intact_edges.append(fiber.fiber_id)
 
+        # Compute mean integrity for degradation tracking
+        s_values = [fiber.S for fiber in self.simulation.state.fibers]
+        mean_integrity = sum(s_values) / len(s_values) if s_values else 1.0
+        n_partially_degraded = sum(1 for s in s_values if 0.0 < s < 1.0)
+
         return {
             'nodes': nodes_abstract,
             'edges': edges,
             'intact_edges': intact_edges,
             'ruptured_edges': ruptured_edges,
             'forces': self._forces_by_edge_id,
-            'strains': strains,  # Fiber strains for color visualization
-            'critical_fiber_id': self.simulation.state.critical_fiber_id,  # Fiber that triggered clearance
-            'plasmin_locations': dict(self.simulation.state.plasmin_locations)  # Copy for thread safety
+            'strains': strains,
+            'integrity': integrity,  # Fiber integrity S values for degradation visualization
+            'mean_integrity': mean_integrity,
+            'n_partially_degraded': n_partially_degraded,
+            'n_cleavage_events': len(self.simulation.state.degradation_history),
+            'critical_fiber_id': self.simulation.state.critical_fiber_id,
+            'plasmin_locations': dict(self.simulation.state.plasmin_locations)
         }
 
 
-# =============================================================================
-# Convenience Function for GUI Integration
-# =============================================================================
 
 def create_adapter_from_excel(excel_path: str,
                               plasmin_concentration: float = 1.0,
@@ -1161,9 +1154,6 @@ def create_adapter_from_excel(excel_path: str,
     return adapter
 
 
-# =============================================================================
-# Unit Verification (Catch A Mitigation)
-# =============================================================================
 
 def verify_network_units(excel_path: str, verbose: bool = True) -> Dict[str, Any]:
     """
@@ -1287,9 +1277,6 @@ def verify_network_units(excel_path: str, verbose: bool = True) -> Dict[str, Any
     return stats
 
 
-# =============================================================================
-# Main: Unit Verification CLI
-# =============================================================================
 
 if __name__ == "__main__":
     import sys

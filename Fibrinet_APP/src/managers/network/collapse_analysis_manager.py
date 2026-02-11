@@ -105,13 +105,13 @@ class CollapseAnalysisManager:
         """
         Logger.log(f"start iterate_constrained_cuts(excel_path={excel_path}, output_dir={output_dir})")
         
-        # Step 1: Load input file
+        # Load input file
         network = self.input_manager.get_network(excel_path)
         nodes = network.get_nodes()
         if not nodes:
             return {"error": "No nodes in network"}
         
-        # Step 2: Calculate flush region from initial network (constant)
+        # Calculate flush region from initial network (constant)
         x_vals = [n.n_x for n in nodes]
         y_vals = [n.n_y for n in nodes]
         xmin, xmax = min(x_vals), max(x_vals)
@@ -136,7 +136,7 @@ class CollapseAnalysisManager:
         # Create output directory
         os.makedirs(output_dir, exist_ok=True)
         
-        # Step 3: Generate initial flush region image
+        # Generate initial flush region image
         initial_image_path = os.path.join(output_dir, "initial_flush_region.png")
         try:
             self._render_initial_flush_region(network, flush_xmin, flush_xmax, ymin, ymax, 
@@ -160,7 +160,7 @@ class CollapseAnalysisManager:
             writer = csv.writer(csvfile)
             writer.writerow(csv_headers)
             
-            # Step 4: Iterative cuts; region edges recomputed each iteration
+            # Iterative cuts; region edges recomputed each iteration
             while True:
                 step += 1
                 Logger.log(f"Iteration {step}")
@@ -197,7 +197,7 @@ class CollapseAnalysisManager:
                 self._remove_edge_from_network(network, edge_to_remove)
                 cumulative_removed.append(edge_to_remove)
                 
-                # Step 5: Relax physics after each removal
+                # Relax physics after each removal
                 self.physics_engine.relax_network(network)
                 
                 # Compute LCC stats
@@ -301,7 +301,7 @@ class CollapseAnalysisManager:
 
         return edge_id_to_uv, adj, flush_bounds
 
-    # ------------------ Constrained Min-Cut (unit capacities) ------------------
+    # Constrained min-cut (unit capacities)
     def _constrained_min_cut(self, network: BaseNetwork, flush_bounds: dict):
         """Compute min s-t cut constrained to region edges (unit capacities)."""
         nodes = network.get_nodes()

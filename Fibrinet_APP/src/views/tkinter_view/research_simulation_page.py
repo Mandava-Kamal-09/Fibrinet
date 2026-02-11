@@ -16,15 +16,19 @@ import hashlib
 import copy
 import time
 from tkinter import simpledialog
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 from .tkinter_view import TkinterView
 from src.config.feature_flags import FeatureFlags
 from src.core.fibrinet_core_v2_adapter import CoreV2GUIAdapter
+from src.diagnostics.diagnostics import compute_full_diagnostics, DiagnosticsResult
 
-#
-# Phase 2.0 (force-dependent degradation) constants:
+# Force-dependent degradation constants:
 # - Deterministic, fixed (no UI yet)
 # - Setting PHASE2_FORCE_ALPHA = 0.0 yields force-independent (uniform) degradation.
-#
 PHASE2_FORCE_ALPHA = 0.01
 
 
@@ -428,7 +432,7 @@ def _is_spatial_mode_active() -> bool:
     --------
     bool: True if USE_SPATIAL_PLASMIN feature flag is enabled.
     
-    Phase 2F: Single source of truth for spatial vs. legacy mode check.
+    Single source of truth for spatial vs. legacy mode check.
     """
     from src.config.feature_flags import FeatureFlags
     return bool(FeatureFlags.USE_SPATIAL_PLASMIN)
@@ -450,7 +454,7 @@ def _copy_edge_with_updates(edge: "Phase1EdgeSnapshot", **updates) -> "Phase1Edg
     Phase1EdgeSnapshot
         New snapshot with updated fields and segments preserved (if present).
     
-    Phase 2F: Single source of truth for immutable edge updates that preserve segments.
+    Single source of truth for immutable edge updates that preserve segments.
     
     Examples:
     ---------
@@ -514,15 +518,15 @@ class FiberSegment:
 @dataclass(frozen=True)
 class Phase1EdgeSnapshot:
     """
-    Immutable edge snapshot for Phase 1 (v1 + optional v2/v5 spatial plasmin).
+    Immutable edge snapshot for (v1 + optional v2/v5 spatial plasmin).
 
     Core Fields (Legacy):
     - edge_id: stable identifier
     - n_from / n_to: node endpoint identifiers
     - k0: baseline stiffness per protofibril; fiber-level stiffness emerges via multiplication by N_pf
     - original_rest_length: imported rest length (constant; never modified)
-    - L_rest_effective: effective rest length (persistent; may increase irreversibly in Phase 2.3)
-    - M: short-term damage memory (persistent; Phase 2.8)
+    - L_rest_effective: effective rest length (persistent; may increase irreversibly in )
+    - M: short-term damage memory (persistent; )
     - S: current strength (scalar integrity in legacy; derived proxy in spatial mode)
     - thickness: imported per-edge thickness (immutable experimental data)
     - lysis_batch_index: first batch index where S <= 0 (set once)
@@ -682,7 +686,7 @@ class Phase1EdgeSnapshot:
 
 class Phase1NetworkAdapter:
     """
-    Minimal adapter boundary for Phase 1 Research Simulation.
+    Minimal adapter boundary for Research Simulation.
 
     Debug logging can be enabled via environment variable:
         export FIBRINET_DEBUG=1
@@ -707,7 +711,7 @@ class Phase1NetworkAdapter:
     Notes:
     - This adapter introduces NO new behavior or physics. It delegates relaxation to an injected
       implementation hook that wraps the existing linear spring-force solver.
-    - In Phase 1, cleaved status is derived strictly as S <= 0 when needed; it is never stored.
+    - Cleaved status is derived strictly as S <= 0 when needed; it is never stored.
     """
 
     def __init__(
@@ -737,24 +741,24 @@ class Phase1NetworkAdapter:
         # This is experimental input and must not drift.
         self.initial_boundary_y: dict[int, float] = {}
 
-        # Phase 1 step parameters + hooks (must be provided by future loader; not inferred here).
+        # Step parameters + hooks (must be provided by future loader; not inferred here).
         self.lambda_0 = None
         self.delta = None
         self.dt = None
         self.g_force = None
         self.modifier = None
 
-        # Phase 2.2: previous-batch mechanical state (strain-rate proxy input).
+        # Previous-batch mechanical state (strain-rate proxy input).
         # Initialized to None at network load (required).
         self.prev_mean_tension: float | None = None
 
-        # Phase 2.3: plastic rest-length remodeling constants (wired at Start; no UI).
+        # Plastic rest-length remodeling constants (wired at Start; no UI).
         self.plastic_F_threshold = None
         self.plastic_rate = None
 
-        # Phase 3.1: deterministic, append-only experiment log (cleared on new load only).
+        # Deterministic, append-only experiment log (cleared on new load only).
         self.experiment_log: list[dict[str, Any]] = []
-        # Phase 3.5: deterministic parameter freeze + provenance stamp.
+        # Deterministic parameter freeze + provenance stamp.
         # Cleared on new network load only.
         self.frozen_params: dict[str, Any] | None = None
         self.provenance_hash: str | None = None
@@ -789,20 +793,20 @@ class Phase1NetworkAdapter:
         self.termination_time: float | None = None
         self.termination_cleavage_fraction: float | None = None
 
-        # Phase 3.6: deterministic RNG freeze + replay consistency.
+        # Deterministic RNG freeze + replay consistency.
         # - frozen_rng_state is captured once at Start.
         # - Cleared on new network load only.
         self.rng = None
         self.frozen_rng_state = None
         self.frozen_rng_state_hash: str | None = None
 
-        # Phase 4.2: branching provenance (set only on fork; stamped into future log entries).
+        # Branching provenance (set only on fork; stamped into future log entries).
         self.branch_parent_batch_index: int | None = None
         self.branch_parent_batch_hash: str | None = None
-        # Phase 4.3: sweep stamping (set only for sweep branches; stamped into future log entries).
+        # Sweep stamping (set only for sweep branches; stamped into future log entries).
         self.sweep_param: str | None = None
         self.sweep_value: float | None = None
-        # Phase 4.4: grid sweep stamping (set only for grid branches; stamped into future log entries).
+        # Grid sweep stamping (set only for grid branches; stamped into future log entries).
         self.grid_params: dict[str, float] | None = None
 
         # Injected wrapper around the existing solver. If not provided, relax() fails loudly.
@@ -811,14 +815,14 @@ class Phase1NetworkAdapter:
         # v5.0 spatial plasmin parameters (set at load; frozen at Start)
         self.spatial_plasmin_params: dict[str, Any] | None = None
         
-        # Phase 2G: Global plasmin pool (supply-limited stochastic seeding)
+        # Global plasmin pool (supply-limited stochastic seeding)
         # P_total_quanta: total plasmin quanta in the system (fixed at Start)
         # P_free_quanta: currently unbound plasmin quanta (changes each batch)
         # Conservation: P_free_quanta + sum(B_i across all segments) == P_total_quanta
         self.P_total_quanta: int | None = None
         self.P_free_quanta: int | None = None
 
-        # Phase 2D: Fractured edge history (edge removal tracking)
+        # Fractured edge history (edge removal tracking)
         # Each entry: {"edge_id", "batch_index", "segments", "final_stiffness", "tension_at_failure", "strain_at_failure"}
         self.fractured_history: list[dict[str, Any]] = []
 
@@ -856,7 +860,7 @@ class Phase1NetworkAdapter:
 
     def phase2_g_force(self, F: float) -> float:
         """
-        Phase 2.0 force-response function (deterministic, monotonic in tensile force).
+        force-response function (deterministic, monotonic in tensile force).
         g_force(F) = 1 + α * F_tension, with α fixed by design (no UI yet).
         """
         try:
@@ -868,7 +872,7 @@ class Phase1NetworkAdapter:
 
     def phase2_1_g_force(self, F: float) -> float:
         """
-        Phase 2.1 nonlinear, bounded, monotone force-response (Hill / Michaelis–Menten style):
+        nonlinear, bounded, monotone force-response (Hill / Michaelis–Menten style):
 
             g(F) = 1 + alpha * (F^n / (F^n + F0^n))
 
@@ -900,7 +904,7 @@ class Phase1NetworkAdapter:
 
     def phase2_2_strain_rate_factor(self, *, mean_tension: float, dt: float) -> float:
         """
-        Phase 2.2 strain-rate proxy multiplier (deterministic):
+        strain-rate proxy multiplier (deterministic):
 
           if prev_mean_tension is None: factor = 1.0
           else:
@@ -911,7 +915,7 @@ class Phase1NetworkAdapter:
         Safety:
         - If no intact edges exist upstream, caller should pass mean_tension=0 and use factor=1.0.
         - Asserts factor is finite.
-        - Setting beta = 0.0 recovers Phase 2.1 behavior.
+        - Setting beta = 0.0 recovers behavior.
         """
         prev = self.prev_mean_tension
         if prev is None:
@@ -920,9 +924,9 @@ class Phase1NetworkAdapter:
         beta = float(getattr(self, "rate_beta"))
         eps0 = float(getattr(self, "rate_eps0"))
         if dt <= 0.0:
-            raise ValueError("dt must be > 0 for Phase 2.2 strain-rate factor.")
+            raise ValueError("dt must be > 0 for strain-rate factor.")
         if eps0 <= 0.0:
-            raise ValueError("rate_eps0 must be > 0 for Phase 2.2 strain-rate factor.")
+            raise ValueError("rate_eps0 must be > 0 for strain-rate factor.")
 
         dF = float(mean_tension) - float(prev)
         strain_rate = dF / float(dt)
@@ -932,14 +936,12 @@ class Phase1NetworkAdapter:
 
     def configure_existing_solver_relaxation(self):
         """
-        Phase 1C wiring: bind this adapter's relaxation hook to the existing deterministic
+        wiring: bind this adapter's relaxation hook to the existing deterministic
         2D linear spring-force relaxation solver (no solver logic modifications).
         """
         self._relax_impl = self._build_existing_solver_relax_impl()
 
-    # ---------------------------
-    # Phase 3.2 deterministic export (CSV + JSON)
-    # ---------------------------
+    # Deterministic export (CSV + JSON)
     def export_experiment_log_json(self, path: str):
         """
         Export exactly `experiment_log` as JSON (structured), deterministic:
@@ -1001,7 +1003,7 @@ class Phase1NetworkAdapter:
             "newly_cleaved",
             "mean_tension",
             "lysis_fraction",
-            # Phase 3E: Per-edge aggregates (spatial mode only; nullable)
+            # Per-edge aggregates (spatial mode only; nullable)
             "edge_n_min_global",
             "edge_n_mean_global",
             "edge_B_total_sum",
@@ -1037,7 +1039,7 @@ class Phase1NetworkAdapter:
                 "newly_cleaved": float(entry["newly_cleaved"]),
                 "mean_tension": float(entry["mean_tension"]),
                 "lysis_fraction": float(entry["lysis_fraction"]),
-                # Phase 3E: Per-edge aggregates (nullable)
+                # Per-edge aggregates (nullable)
                 "edge_n_min_global": float(entry["edge_n_min_global"]) if entry.get("edge_n_min_global") is not None else "",
                 "edge_n_mean_global": float(entry["edge_n_mean_global"]) if entry.get("edge_n_mean_global") is not None else "",
                 "edge_B_total_sum": float(entry["edge_B_total_sum"]) if entry.get("edge_B_total_sum") is not None else "",
@@ -1117,7 +1119,7 @@ class Phase1NetworkAdapter:
 
     def export_fractured_history_csv(self, path: str):
         """
-        Phase 3F: Export fractured edge history as CSV.
+        Export fractured edge history as CSV.
         One row per segment per fractured edge (deterministic ordering).
         No partial writes (atomic replace).
         """
@@ -1205,7 +1207,7 @@ class Phase1NetworkAdapter:
         - edges: [{edge_id, n_from, n_to, S, M, original_rest_length, L_rest_effective, ...}]
           - In spatial mode (v5.0), each edge may also include:
             - segments: [{segment_index, n_i, B_i, S_i}]
-        - Phase 2G (v5.0) spatial mode only:
+        - (v5.0) spatial mode only:
           - P_total_quanta, P_free_quanta (plasmin pool state)
           - spatial_plasmin_params (frozen input params needed to resume)
 
@@ -1263,14 +1265,14 @@ class Phase1NetworkAdapter:
             "provenance_hash": self.provenance_hash,
             "frozen_params": copy.deepcopy(self.frozen_params),
             "rng_state_hash": self.frozen_rng_state_hash,
-            # Phase 4.1 checkpointing requires restoring RNG state exactly.
+            # Checkpointing requires restoring RNG state exactly.
             # Store raw frozen RNG state in JSON-safe form (no randomness; deterministic serialization).
             "frozen_rng_state": _jsonify(self.frozen_rng_state),
             "batch_hash": latest_batch_hash,
             "batch_duration_sec": latest_batch_duration_sec,
             "global_lysis_batch_index": self.global_lysis_batch_index,
             "global_lysis_time": self.global_lysis_time,
-            # Phase 2G (v5.0): plasmin pool state for deterministic checkpoint/replay (spatial mode only)
+            # Plasmin pool state for deterministic checkpoint/replay (spatial mode only)
             "P_total_quanta": (int(self.P_total_quanta) if self.P_total_quanta is not None else None),
             "P_free_quanta": (int(self.P_free_quanta) if self.P_free_quanta is not None else None),
             # v5.0 spatial plasmin params (needed to resume spatial kinetics deterministically)
@@ -1294,9 +1296,9 @@ class Phase1NetworkAdapter:
 
     def replay_single_batch(self, snapshot_path: str) -> dict:
         """
-        Phase 3.4 deterministic replay check (read-only).
+        deterministic replay check (read-only).
 
-        Loads a previously exported Phase 3.3 network snapshot (JSON), reconstructs a temporary
+        Loads a previously exported network snapshot (JSON), reconstructs a temporary
         adapter clone, runs exactly one "Advance One Batch" worth of logic (no UI calls),
         and returns key observables:
           - newly_cleaved
@@ -1321,7 +1323,7 @@ class Phase1NetworkAdapter:
         if not isinstance(snap, dict) or "nodes" not in snap or "edges" not in snap:
             raise ValueError("Invalid snapshot format: expected JSON object with 'nodes' and 'edges'.")
 
-        # Phase 3.5 replay enforcement: provenance must match.
+        # Replay enforcement: provenance must match.
         snap_hash = snap.get("provenance_hash", None)
         if self.provenance_hash is None:
             raise ValueError("Replay failed: current adapter has no provenance_hash (parameters not frozen).")
@@ -1374,7 +1376,7 @@ class Phase1NetworkAdapter:
             if list(self.frozen_params.get("initial_boundary_y", [])) != list(snap_frozen_params.get("initial_boundary_y", [])):
                 raise ValueError("Replay failed: initial_boundary_y in snapshot does not match current experiment.")
 
-        # Phase 3.6 replay enforcement: RNG hash must match (stochastic reproducibility spine).
+        # Replay enforcement: RNG hash must match (stochastic reproducibility spine).
         snap_rng_hash = snap.get("rng_state_hash", None)
         if self.frozen_rng_state_hash is None or self.frozen_rng_state is None:
             raise ValueError("Replay failed: current adapter has no frozen_rng_state (RNG not frozen).")
@@ -1541,7 +1543,7 @@ class Phase1NetworkAdapter:
         clone.plasmin_mode = str(self.frozen_params.get("plasmin_mode")) if isinstance(self.frozen_params, dict) and ("plasmin_mode" in self.frozen_params) else None
         clone.N_plasmin = int(self.frozen_params.get("N_plasmin")) if isinstance(self.frozen_params, dict) and ("N_plasmin" in self.frozen_params) else None
 
-        # Phase 3.6: restore frozen RNG state on clone (no reseeding).
+        # Restore frozen RNG state on clone (no reseeding).
         clone.rng = random.Random()
         clone.rng.setstate(self.frozen_rng_state)
 
@@ -1587,7 +1589,7 @@ class Phase1NetworkAdapter:
 
         # Run exactly one batch worth of logic using the SAME ordering as advance_one_batch.
         # (Guardrails apply; no logging, no UI calls.)
-        # --- Pre-batch edge consistency ---
+        # Pre-batch edge consistency
         for e in clone.edges:
             if not (0.0 <= float(e.S) <= 1.0):
                 raise ValueError("Replay failed: S out of bounds.")
@@ -1887,13 +1889,13 @@ class Phase1NetworkAdapter:
             clone.global_lysis_batch_index = int(expected["batch_index"])
             clone.global_lysis_time = float(expected["time"])
 
-        # Phase 3.6: replay RNG consistency check against logged hash.
+        # Replay RNG consistency check against logged hash.
         replay_rng_hash = hashlib.sha256(str(clone.rng.getstate()).encode("utf-8")).hexdigest()
         expected_rng_hash = str(expected.get("rng_state_hash"))
         if replay_rng_hash != expected_rng_hash:
             raise ValueError("Replay failed: RNG state hash mismatch after replay.")
 
-        # Phase 3.7: deterministic batch_hash enforcement (end-to-end integrity).
+        # Deterministic batch_hash enforcement (end-to-end integrity).
         def _batch_hash_payload(batch_index: int, time_val: float, strain_val: float, sigma_ref_val: float | None, selected_ids: list[int], edges_sorted: list[Phase1EdgeSnapshot]):
             return {
                 "batch_index": int(batch_index),
@@ -1959,10 +1961,10 @@ class Phase1NetworkAdapter:
 
     def load_checkpoint(self, snapshot_path: str, log_path: str, resume_batch_index: int):
         """
-        Phase 4.1: deterministic checkpoint/resume (batch-index addressable).
+        : deterministic checkpoint/resume (batch-index addressable).
 
         Loads:
-        - Phase 3.3 snapshot (JSON)
+        - snapshot (JSON)
         - Experiment log (CSV or JSON)
 
         Validates:
@@ -2010,7 +2012,7 @@ class Phase1NetworkAdapter:
             with open(log_path, "r", encoding="utf-8", newline="") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    # Rehydrate structure matching Phase 3.1/3.7 schema.
+                    # Rehydrate structure matching /3.7 schema.
                     params = {}
                     for k, v in row.items():
                         if k.startswith("param_"):
@@ -2250,7 +2252,7 @@ class Phase1NetworkAdapter:
         self.global_lysis_batch_index = snap.get("global_lysis_batch_index", None)
         self.global_lysis_time = snap.get("global_lysis_time", None)
 
-        # Restore prev_mean_tension for Phase 2.2 continuity (from log entry at resume index).
+        # Restore prev_mean_tension for continuity (from log entry at resume index).
         self.prev_mean_tension = float(entry.get("mean_tension")) if entry.get("mean_tension") is not None else None
 
         # Thickness consistency (explicit; reproducibility spine).
@@ -2317,7 +2319,7 @@ class Phase1NetworkAdapter:
 
     def fork_from_checkpoint(self, snapshot_path: str, log_path: str, resume_batch_index: int) -> "Phase1NetworkAdapter":
         """
-        Phase 4.2: deterministic branching / fork-from-checkpoint (copy-on-write).
+        : deterministic branching / fork-from-checkpoint (copy-on-write).
 
         Produces a NEW adapter initialized from a valid checkpoint without mutating the current adapter.
         The fork preserves provenance_hash/frozen_params/rng lineage and records its parent batch metadata.
@@ -2418,7 +2420,7 @@ class Phase1NetworkAdapter:
         engine = TwoDimensionalSpringForceDegradationEngineWithoutBiomechanics()
 
         def relax_impl(edges_snapshots: Sequence[Phase1EdgeSnapshot], k_eff_intact: Sequence[float], strain: float) -> Sequence[float]:
-            # Adapter–solver reconciliation (Phase 1D):
+            # Adapter–solver reconciliation:
             # The legacy solver operates on the network edge list we provide. During batch execution,
             # `k_eff_intact` corresponds to the *post-degradation* intact-edge list constructed inside
             # DegradationBatchStep, while `edges_snapshots` reflects the adapter's pre-batch snapshot.
@@ -2427,7 +2429,7 @@ class Phase1NetworkAdapter:
             # the correct edge subset by scanning edges once in a fixed order and consuming stiffness
             # entries in order.
             #
-            # In Phase 1, each edge's strength either stays the same or decreases by `delta` in a batch,
+            # Each edge's strength either stays the same or decreases by `delta` in a batch,
             # so k_eff for a given edge must match either k0*S or k0*max(S-delta,0).
             intact_edges: list[Phase1EdgeSnapshot] = []
             k_eff_list: list[float] = []
@@ -2557,12 +2559,12 @@ class Phase1NetworkAdapter:
                             "e_id": int(e.edge_id),
                             "n_from": int(e.n_from),
                             "n_to": int(e.n_to),
-                            # Phase 2.3: solver must use effective rest length.
+                            # Solver must use effective rest length.
                             "rest_length": float(e.L_rest_effective),
                         }
                     )
                 )
-                # Phase 1D: per-edge stiffness k_i = k0 * S_i is provided transiently via attribute.
+                # Per-edge stiffness k_i = k0 * S_i is provided transiently via attribute.
                 # This does not change solver behavior when absent.
                 setattr(edge_obj, "spring_constant", float(k_eff_list[i]))
                 # Stage 1 thickness-aware modeling: propagate thickness as read-only data (no physics use).
@@ -2667,7 +2669,7 @@ class Phase1NetworkAdapter:
                     "n_from": e.n_from,
                     "n_to": e.n_to,
                     "k0": float(e.k0),
-                    # Phase 2.3: solver uses effective rest length; expose it here as well.
+                    # Solver uses effective rest length; expose it here as well.
                     "rest_length": float(e.L_rest_effective),
                     "S": float(e.S),
                     "thickness": float(e.thickness),  # read-only experimental data (not used in Stage 1)
@@ -2802,7 +2804,7 @@ class Phase1NetworkAdapter:
         """
         if self._relax_impl is None:
             raise NotImplementedError(
-                "Phase 1 relaxation solver is not configured for Research Simulation.\n\n"
+                "relaxation solver is not configured for Research Simulation.\n\n"
                 "Phase1NetworkAdapter requires a relax_impl wrapper around the existing linear solver."
             )
         return self._relax_impl(self._edges, k_eff_intact, strain)
@@ -2864,7 +2866,7 @@ class SimulationStep(Protocol):
 @dataclass(frozen=True)
 class DegradationBatchConfig:
     """
-    Explicit parameter bundle for Phase 1 `DegradationBatchStep`.
+    Explicit parameter bundle for `DegradationBatchStep`.
 
     Parameters (all explicit; no implicit defaults beyond identity modifiers):
     - lambda_0: baseline degradation rate (units depend on model; not assumed here)
@@ -2886,7 +2888,7 @@ class DegradationBatchConfig:
 
 class DegradationBatchStep:
     """
-    Phase 1 concrete SimulationStep: executes one discrete degradation batch.
+    concrete SimulationStep: executes one discrete degradation batch.
 
     Strict batch order (per spec):
     1) Degradation phase (probabilities computed from START-of-batch forces)
@@ -2936,7 +2938,7 @@ class DegradationBatchStep:
     def __call__(self, state_snapshot: Any) -> Mapping[str, Any]:
         cfg = self.config
 
-        # --- Snapshot extraction (read-only) ---
+        # Snapshot extraction (read-only)
         edges_in: Sequence[Mapping[str, Any]] = getattr(state_snapshot, "edges")
         time_in: float = float(getattr(state_snapshot, "time"))
         strain_value: float = float(getattr(state_snapshot, "strain_value"))
@@ -2953,7 +2955,7 @@ class DegradationBatchStep:
         if len(forces_start_intact) != len(intact_indices_start):
             raise ValueError("state_snapshot.forces length must equal number of intact edges at batch start (S>0)")
 
-        # --- 1) Degradation phase ---
+        # 1) Degradation phase
         edges_after_deg: list[dict[str, Any]] = []
         intact_force_cursor = 0
         for idx, e in enumerate(edges_in):
@@ -2980,7 +2982,7 @@ class DegradationBatchStep:
 
             edges_after_deg.append(e_out)
 
-        # --- 2) Cleavage phase ---
+        # 2) Cleavage phase
         # Cleavage is defined strictly as S_i <= 0 (derived, not persisted).
         # Effective stiffness is computed transiently as k_eff = k0 * S_i.
         intact_indices_after: list[int] = []
@@ -2991,14 +2993,14 @@ class DegradationBatchStep:
                 intact_indices_after.append(i)
                 k_eff_intact.append(float(e_out["k0"]) * S_i)
 
-        # --- 3) Mechanical relaxation phase ---
+        # 3) Mechanical relaxation phase
         # Must use injected existing linear solver (no placeholder physics here).
         # Exclude edges with S_i <= 0 entirely from solver input (per correction #4).
         forces_relaxed_intact = list(linear_solver(k_eff_intact, strain_value))
         if len(forces_relaxed_intact) != len(k_eff_intact):
             raise ValueError("linear_solver returned force list length != number of intact edges")
 
-        # --- 4) Metrics phase ---
+        # 4) Metrics phase
         time_out = time_in + float(cfg.dt)
 
         # Forces are obtained exclusively from solver output.
@@ -3083,11 +3085,11 @@ class SimulationController:
         self.rng = random.Random(0)
         # Last batch observables (metrics) returned by the step; rendered by UI.
         self.last_metrics = None
-        # Phase 3.8: last batch wall-clock duration (diagnostics only; not part of physics).
+        # Last batch wall-clock duration (diagnostics only; not part of physics).
         self.last_batch_duration_sec: float | None = None
-        # Phase 4.3: in-memory sweep results (deterministic; no auto-export).
+        # In-memory sweep results (deterministic; no auto-export).
         self.sweep_results: list[dict[str, Any]] = []
-        # Phase 4.4: in-memory grid sweep results (deterministic; no auto-export).
+        # In-memory grid sweep results (deterministic; no auto-export).
         self.grid_sweep_results: list[dict[str, Any]] = []
 
     def load_network(self, path):
@@ -3263,14 +3265,14 @@ class SimulationController:
             "beta": None,
             "epsilon": 0.1,  # Default cracked threshold
             "K_crit": None,
-            # Unit conversion factors (Phase 1.5)
+            # Unit conversion factors
             "coord_to_m": 1.0,      # Default: coordinates already in meters
             "thickness_to_m": 1.0,  # Default: thickness already in meters
             "N_seg_max": 10000,     # Safety guard against segment explosion
-            # Phase 2G: Stochastic seeding parameters
+            # Stochastic seeding parameters
             "P_total_quanta": 100,  # Default: 100 plasmin quanta total
             "lambda_bind_total": 10.0,  # Default: 10 binding events/second rate
-            # Phase 2D: Fracture threshold
+            # Fracture threshold
             "n_crit_fraction": 0.1,  # Edge cleaves when min(n_i/N_pf) <= 0.1
         }
         
@@ -3318,19 +3320,19 @@ class SimulationController:
                         if abs(existing - new_val) > 1e-12:
                             raise ValueError(f"Conflicting K_crit values in meta_data: K_crit={existing}, k_crit={new_val}")
                     spatial_plasmin_params["K_crit"] = _coerce_float(v)
-                # Phase 1.5: Unit conversion factors
+                # Unit conversion factors
                 elif nk == "coord_to_m":
                     spatial_plasmin_params["coord_to_m"] = _coerce_float(v)
                 elif nk == "thickness_to_m":
                     spatial_plasmin_params["thickness_to_m"] = _coerce_float(v)
                 elif nk == "n_seg_max":
                     spatial_plasmin_params["N_seg_max"] = int(float(v))
-                # Phase 2G: Stochastic seeding parameters
+                # Stochastic seeding parameters
                 elif nk == "p_total_quanta":
                     spatial_plasmin_params["P_total_quanta"] = int(float(v))
                 elif nk == "lambda_bind_total":
                     spatial_plasmin_params["lambda_bind_total"] = _coerce_float(v)
-                # Phase 2D: Fracture threshold
+                # Fracture threshold
                 elif nk == "n_crit_fraction":
                     spatial_plasmin_params["n_crit_fraction"] = _coerce_float(v)
         
@@ -3410,8 +3412,7 @@ class SimulationController:
         if not edges:
             raise ValueError("No edges found in edges table.")
         
-        # v5.0 Spatial Plasmin Segment Initialization
-        # ============================================
+        # Spatial Plasmin Segment Initialization
         # If USE_SPATIAL_PLASMIN is True, initialize segment-level state for each fiber.
         # Segments track localized binding (B_i) and protofibril damage (n_i).
         if FeatureFlags.USE_SPATIAL_PLASMIN:
@@ -3457,7 +3458,7 @@ class SimulationController:
                 if N_seg <= 0:
                     N_seg = 1  # At least one segment
                 
-                # Phase 1.5: Hard safety guard against segment explosion
+                # Hard safety guard against segment explosion
                 if N_seg > N_seg_max:
                     raise ValueError(
                         f"Segment explosion detected for edge {edge.edge_id}:\n"
@@ -3476,7 +3477,7 @@ class SimulationController:
                 # Initialize segments
                 segments = []
                 for seg_idx in range(N_seg):
-                    # Phase 1.5: Compute actual segment length (last segment may be shorter)
+                    # Compute actual segment length (last segment may be shorter)
                     start = seg_idx * L_seg
                     L_i = min(L_seg, max(L - start, 0.0))
                     
@@ -3521,9 +3522,9 @@ class SimulationController:
         # - Membership NEVER changes after load.
 
         def _relax_impl_not_configured(_edges_snapshots, k_eff_intact, _strain):
-            # Phase 1B import does not change/implement solver behavior.
+            # Import does not change/implement solver behavior.
             # A proper solver wrapper must be injected here without leaking it past the adapter boundary.
-            raise NotImplementedError("Phase 1 relaxation solver hook is not configured for Research Simulation.")
+            raise NotImplementedError("Relaxation solver hook is not configured for Research Simulation.")
 
         adapter = Phase1NetworkAdapter(
             path=p,
@@ -3553,15 +3554,15 @@ class SimulationController:
 
         # Forces initialized to zero for all edges (observable only).
         adapter._forces_by_edge_id = {e.edge_id: 0.0 for e in adapter.edges}
-        # Phase 2.2: previous-batch mechanical state is initialized at load (required).
+        # Previous-batch mechanical state is initialized at load (required).
         adapter.prev_mean_tension = None
-        # Phase 3.1: reset experiment log on new network load (required).
+        # Reset experiment log on new network load (required).
         adapter.experiment_log = []
-        # Phase 3.5: reset frozen params + provenance on new load only (required).
+        # Reset frozen params + provenance on new load only (required).
         adapter.frozen_params = None
         adapter.provenance_hash = None
         adapter.applied_strain = None
-        # Phase 3.6: reset frozen RNG on new load only (required).
+        # Reset frozen RNG on new load only (required).
         adapter.frozen_rng_state = None
         adapter.frozen_rng_state_hash = None
         # Terminal-state reset on new load only.
@@ -3569,10 +3570,10 @@ class SimulationController:
         adapter.termination_batch_index = None
         adapter.termination_time = None
         adapter.termination_cleavage_fraction = None
-        # Phase 2D: reset fractured edge history on new load only.
+        # Reset fractured edge history on new load only.
         adapter.fractured_history = []
 
-        # Phase 1C: configure relaxation to use the existing solver (no solver modifications).
+        # Configure relaxation to use the existing solver (no solver modifications).
         adapter.configure_existing_solver_relaxation()
         # Validate baseline mechanics at the *current* strain: relax once deterministically.
         adapter.relax(float(self.state.strain_value))
@@ -3589,7 +3590,7 @@ class SimulationController:
 
         # RNG reseeds ONLY when a new network is loaded.
         self.rng = random.Random(0)
-        # Phase 3.6: adapter references controller RNG; it will be frozen at Start.
+        # Adapter references controller RNG; it will be frozen at Start.
         adapter.rng = self.rng
 
         # Reset experiment observables on load (no physics).
@@ -3612,11 +3613,11 @@ class SimulationController:
 
     def configure_phase1_parameters_from_ui(self, plasmin_concentration_str: str, time_step_str: str, max_time_str: str, applied_strain_str: str):
         """
-        Phase 1 parameter wiring (deterministic):
+        parameter wiring (deterministic):
         - lambda_0 := float(plasmin concentration)
         - dt := float(time step)
-        - delta := fixed constant 0.05 (Phase 1 design)
-        - g_force := lambda F: 1.0  (force-independent in Phase 1)
+        - delta := fixed constant 0.05 (design)
+        - g_force := lambda F: 1.0  (force-independent by default)
 
         Safety:
         - Requires a loaded Phase1NetworkAdapter
@@ -3624,11 +3625,11 @@ class SimulationController:
         - Does NOT silently default invalid values
 
         Notes:
-        - max_time is read for traceability but unused in Phase 1 execution.
+        - max_time is read for traceability but unused in execution.
         """
         adapter = self.state.loaded_network
         if not isinstance(adapter, Phase1NetworkAdapter):
-            raise ValueError("No network loaded for Research Simulation. Load a network before configuring Phase 1 parameters.")
+            raise ValueError("No network loaded for Research Simulation. Load a network before configuring parameters.")
 
         try:
             lambda_0 = float(str(plasmin_concentration_str).strip())
@@ -3654,10 +3655,10 @@ class SimulationController:
         if not (dt > 0.0):
             raise ValueError("Time step must be > 0 (mapped to Δt).")
 
-        # Read (unused in Phase 1) — do not enforce yet.
+        # Read (unused) -- do not enforce yet.
         _ = str(max_time_str).strip()
 
-        # Phase 3.5: parameter freeze hard rule.
+        # Parameter freeze hard rule.
         # If already frozen, disallow mutation; allow Start only if values match frozen_params.
         if isinstance(adapter, Phase1NetworkAdapter) and adapter.frozen_params is not None:
             frozen = adapter.frozen_params
@@ -3707,42 +3708,41 @@ class SimulationController:
         adapter.applied_strain = float(applied_strain)
         # Strain is fixed after Start; controller state uses this value.
         self.state.strain_value = float(applied_strain)
-        # Phase 1: fixed by design (deterministic, documented constant).
+        # Fixed by design (deterministic, documented constant).
         adapter.delta = 0.05
-        # Phase 2.1: nonlinear, bounded mechanochemical coupling (deterministic; fixed constants, no UI).
+        # Nonlinear, bounded mechanochemical coupling (deterministic; fixed constants, no UI).
         adapter.force_alpha = 1.0
         adapter.force_F0 = 1.0
         adapter.force_hill_n = 2.0
         adapter.g_force = adapter.phase2_1_g_force
-        # Phase 2.2: strain-rate–aware multiplier constants (fixed, deterministic; no UI).
-        # Setting rate_beta = 0.0 recovers Phase 2.1 behavior.
+        # Strain-rate-aware multiplier constants (fixed, deterministic; no UI).
         adapter.rate_beta = 0.5
         adapter.rate_eps0 = 1.0
-        # Phase 2.3: plastic rest-length remodeling constants (fixed, deterministic; no UI).
-        # Setting plastic_rate = 0.0 recovers Phase 2.2 behavior exactly.
+        # Plastic rest-length remodeling constants (fixed, deterministic; no UI).
+        # Setting plastic_rate = 0.0 disables plastic remodeling.
         adapter.plastic_F_threshold = 1.0
         adapter.plastic_rate = 0.01
-        # Phase 2.4: force-driven rupture amplification constants (fixed, deterministic; no UI).
-        # Setting rupture_gamma = 0.0 recovers Phase 2.3 behavior exactly.
+        # Force-driven rupture amplification constants (fixed, deterministic; no UI).
+        # Setting rupture_gamma = 0.0 disables rupture amplification.
         adapter.rupture_force_threshold = 3.0
         adapter.rupture_gamma = 0.5
-        # Phase 2.5: energy-based failure gate constants (fixed, deterministic; no UI).
-        # Setting fracture_eta = 0.0 recovers Phase 2.4 behavior exactly.
+        # Energy-based failure gate constants (fixed, deterministic; no UI).
+        # Setting fracture_eta = 0.0 disables energy gating.
         adapter.fracture_Gc = 0.5
         adapter.fracture_eta = 0.3
-        # Phase 2.6: topology-aware cooperativity gate constant (fixed, deterministic; no UI).
-        # Setting coop_chi = 0.0 recovers Phase 2.5 behavior exactly.
+        # Topology-aware cooperativity gate constant (fixed, deterministic; no UI).
+        # Setting coop_chi = 0.0 disables cooperativity gating.
         adapter.coop_chi = 0.5
-        # Phase 2.7: stress-shielding / load redistribution saturation epsilon (fixed; no UI).
+        # Stress-shielding / load redistribution saturation epsilon (fixed; no UI).
         adapter.shield_eps = 1e-6
-        # Phase 2.8: temporal damage memory constants (fixed, deterministic; no UI).
-        # Setting memory_rho = 0.0 recovers Phase 2.7 behavior exactly.
+        # Temporal damage memory constants (fixed, deterministic; no UI).
+        # Setting memory_rho = 0.0 disables memory gating.
         adapter.memory_mu = 0.2
         adapter.memory_rho = 0.1
-        # Phase 2.9: directional anisotropy gate constant (fixed, deterministic; no UI).
-        # Setting aniso_kappa = 0.0 recovers Phase 2.8 behavior exactly.
+        # Directional anisotropy gate constant (fixed, deterministic; no UI).
+        # Setting aniso_kappa = 0.0 disables anisotropy gating.
         adapter.aniso_kappa = 0.5
-        # Phase 3.0: execution guardrails (fixed, deterministic; no UI).
+        # Execution guardrails (fixed, deterministic; no UI).
         adapter.g_max = 50.0
         adapter.cleavage_batch_cap = 0.2
 
@@ -3805,7 +3805,7 @@ class SimulationController:
         if not (float(adapter.left_grip_x) < float(adapter.right_grip_x)):
             raise ValueError("Invalid rigid grips at Start: left_grip_x must be < right_grip_x.")
 
-        # Phase 3.5: freeze parameters + compute deterministic provenance hash at Start.
+        # Freeze parameters + compute deterministic provenance hash at Start.
         # Deep-copy numeric parameters/constants into frozen_params and compute SHA256 over
         # JSON with sorted keys for deterministic reproducibility.
         left_boundary_node_ids = [int(x) for x in sorted(adapter.left_boundary_node_ids)]
@@ -3865,7 +3865,7 @@ class SimulationController:
             "cleavage_batch_cap": float(getattr(adapter, "cleavage_batch_cap")),
         }
         
-        # Phase 2G: Initialize global plasmin pool (spatial mode only)
+        # Initialize global plasmin pool (spatial mode only)
         if FeatureFlags.USE_SPATIAL_PLASMIN:
             if adapter.spatial_plasmin_params is None:
                 raise ValueError("USE_SPATIAL_PLASMIN is True but spatial_plasmin_params not loaded.")
@@ -3886,7 +3886,7 @@ class SimulationController:
         adapter.frozen_params = copy.deepcopy(frozen_params)
         adapter.provenance_hash = hashlib.sha256(frozen_json.encode("utf-8")).hexdigest()
 
-        # Phase 3.6: freeze RNG state at Start (capture once; do not reseed after this point).
+        # Freeze RNG state at Start (capture once; do not reseed after this point).
         if adapter.rng is None:
             raise ValueError("RNG not available on adapter; load a network before Start.")
         rng_state = adapter.rng.getstate()
@@ -3939,18 +3939,18 @@ class SimulationController:
         changed = abs(float(self.state.strain_value) - v) > 1e-12
         self.state.strain_value = v
 
-        # Phase 1C: static mechanics validation — relax once at the current strain.
+        # Static mechanics validation -- relax once at the current strain.
         adapter = self.state.loaded_network
         if isinstance(adapter, Phase1NetworkAdapter):
             adapter.relax(float(v))
         return changed
 
     def advance_one_batch(self):
-        # Phase 3.8: per-batch timing (read-only; diagnostics only).
+        # Per-batch timing (read-only; diagnostics only).
         t0 = time.perf_counter()
 
         """
-        Execute exactly one Phase 1 degradation batch.
+        Execute exactly one degradation batch.
 
         Preconditions (fail loudly via exceptions; UI shows message boxes):
         - Network must be loaded and provide required simulation data hooks
@@ -3976,20 +3976,20 @@ class SimulationController:
 
         adapter = self.state.loaded_network
         if not isinstance(adapter, Phase1NetworkAdapter):
-            raise ValueError("Loaded network is not a Phase 1 adapter instance.")
+            raise ValueError("Loaded network is not a adapter instance.")
 
-        # Validate Phase 1 configuration (no inference or physics assumptions here).
+        # Validate configuration (no inference or physics assumptions here).
         if len(adapter.edges) == 0:
             raise ValueError(
-                "Loaded network has no Phase 1 edge snapshots configured.\n\n"
+                "Loaded network has no edge snapshots configured.\n\n"
                 "Phase1NetworkAdapter.edges must be populated by a future loader."
             )
         if adapter._relax_impl is None:
             raise ValueError(
-                "Phase 1 solver is not configured.\n\n"
+                "solver is not configured.\n\n"
                 "Phase1NetworkAdapter must wrap the existing linear solver via relax_impl."
             )
-        # Phase 1D precondition: static relaxation must already have been performed
+        # Precondition: static relaxation must already have been performed
         # at the current strain (start-of-batch force field must exist).
         if adapter._relaxed_node_coords is None:
             raise ValueError(
@@ -4004,11 +4004,11 @@ class SimulationController:
                 )
         if adapter.g_force is None or adapter.lambda_0 is None or adapter.delta is None or adapter.dt is None:
             raise ValueError(
-                "Phase 1 parameters are not configured on the adapter.\n\n"
+                "parameters are not configured on the adapter.\n\n"
                 "Required: lambda_0, delta, dt, g_force."
             )
 
-        # Phase 3.0 guardrails (pre-batch): edge state consistency checks.
+        # Guardrails (pre-batch): edge state consistency checks.
         for e in adapter.edges:
             S = float(e.S)
             if not (0.0 <= S <= 1.0):
@@ -4023,16 +4023,16 @@ class SimulationController:
         # eliminating the one-batch lag that was suppressing strain-dependent lysis.
         adapter.relax(float(self.state.strain_value))
 
-        # Phase 2.0 batch (force-dependent, deterministic; no RNG draws).
+        # Force-dependent degradation batch (deterministic; no RNG draws).
         # Batch order (exact):
         # a) Use post-relaxation forces from CURRENT strain (relaxed at start of batch)
-        # b) Compute λ_i = λ0 * g_force(F_i) for intact edges
-        # c) Update S_i deterministically over Δt
+        # b) Compute lambda_i = lambda_0 * g_force(F_i) for intact edges
+        # c) Update S_i deterministically over dt
         # d) Remove edges with S_i <= 0 (represented by S=0; solver excludes S<=0)
         # e) Perform exactly one relaxation AFTER degradation (propagates stiffness/damage changes)
 
         if adapter.g_force is None:
-            raise ValueError("Phase 2.0 requires g_force to be configured on the adapter.")
+            raise ValueError("requires g_force to be configured on the adapter.")
 
         # a) cached forces must exist for all intact edges
         intact_edges: list[Phase1EdgeSnapshot] = []
@@ -4051,7 +4051,7 @@ class SimulationController:
         dt = float(adapter.dt)
 
         if not (lambda_0 > 0.0) or not (dt > 0.0):
-            raise ValueError("Invalid Phase 1/2 parameters: lambda_0 and dt must be > 0.")
+            raise ValueError("Invalid simulation parameters: lambda_0 and dt must be > 0.")
 
         # 2) Compute mean tension and sigma_ref from cached pre-batch forces (tension only; nonnegative).
         # Stage 3: sigma_ref is the deterministic median tension across intact edges (computed once per batch).
@@ -4168,14 +4168,14 @@ class SimulationController:
                         "newly_cleaved": 0,
                         "mean_tension": float(mean_tension),
                         "lysis_fraction": float(lysis_fraction),
-                        "dt_used": float(dt),  # Phase 2A/2B: use base dt in termination case
-                        "n_min_frac": None,  # Phase 2B: not computed in termination case
-                        "n_mean_frac": None,  # Phase 2B: not computed in termination case
-                        "total_bound_plasmin": None,  # Phase 2B: not computed in termination case
-                        "total_bound_this_batch": None,  # Phase 2G: not computed in termination case
-                        "min_stiff_frac": None,  # Phase 2C: not computed in termination case
-                        "mean_stiff_frac": None,  # Phase 2C: not computed in termination case
-                        # Phase 2G: Stochastic plasmin seeding observables (not computed in termination case)
+                        "dt_used": float(dt),  # use base dt in termination case
+                        "n_min_frac": None,  # not computed in termination case
+                        "n_mean_frac": None,  # not computed in termination case
+                        "total_bound_plasmin": None,  # not computed in termination case
+                        "total_bound_this_batch": None,  # not computed in termination case
+                        "min_stiff_frac": None,  # not computed in termination case
+                        "mean_stiff_frac": None,  # not computed in termination case
+                        # Stochastic plasmin seeding observables (not computed in termination case)
                         "P_total_quanta": int(adapter.P_total_quanta) if adapter.P_total_quanta is not None else None,
                         "P_free_quanta": int(adapter.P_free_quanta) if adapter.P_free_quanta is not None else None,
                         "bind_events_requested": None,
@@ -4324,9 +4324,9 @@ class SimulationController:
         mu = float(getattr(adapter, "memory_mu"))
         rho = float(getattr(adapter, "memory_rho"))
         if not (0.0 <= mu <= 1.0):
-            raise ValueError("memory_mu must be in [0, 1] for Phase 2.8.")
+            raise ValueError("memory_mu must be in [0, 1] for .")
         if rho < 0.0:
-            raise ValueError("memory_rho must be >= 0 for Phase 2.8.")
+            raise ValueError("memory_rho must be >= 0 for .")
         M_next_by_id: dict[Any, float] = {}
         for e in adapter.edges:
             if float(e.S) > 0.0:
@@ -4336,7 +4336,7 @@ class SimulationController:
                 assert np.isfinite(M_new)
                 M_next_by_id[e.edge_id] = float(M_new)
 
-        # Phase 2.2: strain-rate proxy computed from post-relaxation mean tension.
+        # Strain-rate proxy computed from post-relaxation mean tension.
         # If no intact edges exist, factor is 1.0 (required).
         # Note: This is computed BEFORE binding update, so uses base dt (will be updated to dt_used for actual integration).
         if len(intact_edges) == 0:
@@ -4355,12 +4355,12 @@ class SimulationController:
         # Build a quick lookup for forces by edge_id for this batch.
         force_by_id = {e.edge_id: f for e, f in zip(intact_edges, force_list)}
         
-        # Phase 2G (v5.0): Supply-limited stochastic plasmin seeding for spatial mode ONLY.
+        # Supply-limited stochastic plasmin seeding for spatial mode ONLY.
         # Replaces the continuous Langmuir "binding everywhere" update.
         # Binding is now sparse, stochastic, and supply-limited.
         dt_used = dt  # default: use base dt (legacy behavior)
-        
-        # Phase 2G tracking variables (for logging)
+
+        # Tracking variables (for logging)
         bind_events_requested = 0
         bind_events_applied = 0
         total_unbound_this_batch = 0
@@ -4441,7 +4441,7 @@ class SimulationController:
             if dt_used < dt_min:
                 dt_used = dt_min  # Clamp instead of error
             
-            # ========== STEP A: UNBINDING (stochastic) ==========
+            # Unbinding (stochastic)
             # For each segment with B_i > 0:
             #   p_unbind = 1 - exp(-k_off(T_edge) * dt_used)
             #   U_i ~ Binomial(B_i, p_unbind)
@@ -4488,7 +4488,7 @@ class SimulationController:
             adapter.set_edges(updated_edges_unbind)
             adapter.P_free_quanta = int(P_free)
             
-            # ========== STEP B: BINDING (stochastic, supply-limited) ==========
+            # Binding (stochastic, supply-limited)
             # Sample N_bind_events ~ Poisson(lambda_bind_total * dt_used)
             # Cap at P_free_quanta
             # Choose target segments with weighted sampling (weight = available = S_i - B_i)
@@ -4592,7 +4592,7 @@ class SimulationController:
             # Commit updated edges
             adapter.set_edges(edges_list)
             
-            # ========== STEP C: CONSERVATION CHECKS ==========
+            # Conservation checks
             # P_free_quanta + sum(B_i) == P_total_quanta (with tolerance for rounding)
             total_bound = 0
             for e in adapter.edges:
@@ -4614,8 +4614,8 @@ class SimulationController:
                     f"  Difference = {abs(actual_total - expected_total)} exceeds tolerance = {tolerance}"
                 )
             
-            # Phase 2B (v5.0): Cleavage kinetics (update n_i based on B_i and tension)
-            # This updates ONLY n_i; S, k_eff, edge removal NOT changed in this phase.
+            # Cleavage kinetics (update n_i based on B_i and tension)
+            # This updates ONLY n_i; S, k_eff, edge removal NOT changed here.
             # Cleavage rate: dn_i/dt = -k_cat(T) * B_i, k_cat(T) = k_cat0 * exp(beta * T)
             
             # Extract cleavage parameters (dt_used already includes dt_cleave stability constraint above)
@@ -4660,7 +4660,7 @@ class SimulationController:
             # Commit updated edges (immutable replacement)
             adapter.set_edges(updated_edges_cleave)
             
-            # Phase 2C (v5.0): Stiffness coupling (first chemistry → mechanics feedback)
+            # Stiffness coupling (chemistry -> mechanics feedback)
             # Compute per-edge stiffness fraction from segment protofibrils (weakest-link)
             # and update snapshot.S to feed solver k_eff = k0 * S.
             
@@ -4685,7 +4685,7 @@ class SimulationController:
             # Commit updated edges (immutable replacement)
             adapter.set_edges(updated_edges_stiffness)
 
-            # Phase 2D: Batched fracture detection and edge removal
+            # Batched fracture detection and edge removal
             # Scan all edges for rupture criterion: min(n_i/N_pf) <= n_crit_fraction
             # Remove all fractured edges from topology and archive full segment state.
 
@@ -4736,8 +4736,8 @@ class SimulationController:
                         adapter.fractured_history.append({
                             "edge_id": edge_id,
                             "batch_index": batch_index,
-                            "n_from": edge_snapshot.n_from,  # Phase 3: needed for visualization
-                            "n_to": edge_snapshot.n_to,      # Phase 3: needed for visualization
+                            "n_from": edge_snapshot.n_from,  # needed for visualization
+                            "n_to": edge_snapshot.n_to,      # needed for visualization
                             "segments": edge_snapshot.segments,  # Full FiberSegment tuple
                             "final_stiffness": float(edge_snapshot.S),  # Weakest-link fraction
                             "tension_at_failure": tension_at_failure,  # Edge tension at fracture
@@ -4780,7 +4780,7 @@ class SimulationController:
                 # Force redistribution: relax once after edge removal (only if still connected)
                 adapter.relax(float(self.state.strain_value))
 
-        # Phase 2.6: build local neighborhood mapping once (no persistent graph state).
+        # Build local neighborhood mapping once (no persistent graph state).
         # Neighbors are edges that share at least one node.
         s_by_edge_id = {e.edge_id: float(e.S) for e in adapter.edges}
         node_to_edge_ids: dict[Any, list[Any]] = {}
@@ -4792,7 +4792,7 @@ class SimulationController:
         coords_pre = adapter._relaxed_node_coords
         if coords_pre is None:
             raise ValueError("Missing cached relaxed node positions for energy gate. Relax at current strain before advancing.")
-        # Phase 3.0 guardrails: force cache validity check (must exist for all intact edges).
+        # Guardrails: force cache validity check (must exist for all intact edges).
         for e in adapter.edges:
             if float(e.S) > 0.0 and e.edge_id not in adapter._forces_by_edge_id:
                 raise ValueError("Cached forces missing for one or more intact edges. Press Start to re-run relaxation at the fixed applied strain.")
@@ -4808,18 +4808,18 @@ class SimulationController:
             L_eff = float(e.L_rest_effective)
             M_i = float(M_next_by_id.get(e.edge_id, e.M))
             
-            # Phase 2A.2: Gate legacy scalar degradation path
-            # In spatial mode (v5.0), S is NOT updated by legacy degradation.
-            # Binding kinetics already updated B_i; cleavage (n_i) not implemented yet.
+            # Gate legacy scalar degradation path
+            # In spatial mode, S is NOT updated by legacy degradation.
+            # Binding kinetics already updated B_i.
             # S remains frozen at initialized value (typically 1.0) until cleavage is implemented.
             if not FeatureFlags.USE_SPATIAL_PLASMIN and S_old > 0.0:
                 F = float(force_by_id.get(e.edge_id, 0.0))
 
-                # 4) APPLY plastic rest-length update (Phase 2.3), once per batch, before degradation.
+                # 4) APPLY plastic rest-length update (), once per batch, before degradation.
                 plastic_rate = float(getattr(adapter, "plastic_rate"))
                 plastic_F_threshold = float(getattr(adapter, "plastic_F_threshold"))
                 if plastic_rate < 0.0:
-                    raise ValueError("plastic_rate must be >= 0 for Phase 2.3.")
+                    raise ValueError("plastic_rate must be >= 0 for .")
                 if F > plastic_F_threshold:
                     dL = plastic_rate * (F - plastic_F_threshold) * dt_used
                     assert np.isfinite(dL)
@@ -4828,9 +4828,9 @@ class SimulationController:
                 assert L_eff >= float(e.original_rest_length)
                 assert np.isfinite(L_eff)
 
-                # Phase 2.2: combine force response with strain-rate factor (bounded, deterministic).
+                # Combine force response with strain-rate factor (bounded, deterministic).
                 gF = float(adapter.g_force(F))
-                # Phase 2.4: force-driven rupture amplification term r(F) (>= 1).
+                # Force-driven rupture amplification term r(F) (>= 1).
                 F_crit = float(getattr(adapter, "rupture_force_threshold"))
                 gamma = float(getattr(adapter, "rupture_gamma"))
                 if F <= F_crit:
@@ -4840,7 +4840,7 @@ class SimulationController:
                 assert rF >= 1.0
                 assert np.isfinite(rF)
 
-                # Phase 2.5: energy-based failure gate (fracture-toughness proxy), computed from pre-batch geometry.
+                # Energy-based failure gate (fracture-toughness proxy), computed from pre-batch geometry.
                 p_from = coords_pre.get(e.n_from)
                 p_to = coords_pre.get(e.n_to)
                 if p_from is None or p_to is None:
@@ -4866,7 +4866,7 @@ class SimulationController:
                 assert e_gate >= 1.0
                 assert np.isfinite(e_gate)
 
-                # Phase 2.6: topology-aware cooperativity gate from neighbor damage (local, deterministic).
+                # Topology-aware cooperativity gate from neighbor damage (local, deterministic).
                 neighbor_ids = set(node_to_edge_ids.get(e.n_from, [])) | set(node_to_edge_ids.get(e.n_to, []))
                 if e.edge_id in neighbor_ids:
                     neighbor_ids.remove(e.edge_id)
@@ -4886,10 +4886,10 @@ class SimulationController:
                 assert c_gate >= 1.0
                 assert np.isfinite(c_gate)
 
-                # Phase 2.7: stress-shielding / load redistribution saturation.
+                # Stress-shielding / load redistribution saturation.
                 eps = float(getattr(adapter, "shield_eps"))
                 if eps <= 0.0:
-                    raise ValueError("shield_eps must be > 0 for Phase 2.7.")
+                    raise ValueError("shield_eps must be > 0.")
                 F_tension = max(0.0, float(F))
                 f_load = float(F_tension) / float(mean_tension + eps)
                 assert f_load >= 0.0
@@ -4901,7 +4901,7 @@ class SimulationController:
                 assert 0.0 <= s_gate <= 1.0
                 assert np.isfinite(s_gate)
 
-                # Phase 2.8: memory gate (computed from updated M_i).
+                # Memory gate (computed from updated M_i).
                 M_i = float(M_next_by_id.get(e.edge_id, float(e.M)))
                 assert M_i >= 0.0
                 assert np.isfinite(M_i)
@@ -4909,7 +4909,7 @@ class SimulationController:
                 assert m_gate >= 1.0
                 assert np.isfinite(m_gate)
 
-                # Phase 2.9: directional anisotropy gate (load-alignment sensitivity).
+                # Directional anisotropy gate (load-alignment sensitivity).
                 # Uses cached pre-batch geometry; load direction is uniaxial x: u_load = (1, 0).
                 p_from = coords_pre.get(e.n_from)
                 p_to = coords_pre.get(e.n_to)
@@ -4932,7 +4932,7 @@ class SimulationController:
                 g_total = float(gF) * float(strain_rate_factor) * float(rF) * float(e_gate) * float(c_gate) * float(s_gate) * float(m_gate) * float(a_gate)
                 assert np.isfinite(g_total)
 
-                # Phase 3.0 numerical safety clamp (not physics).
+                # Numerical safety clamp (not physics).
                 g_max = float(getattr(adapter, "g_max"))
                 if g_total > g_max:
                     g_total = g_max
@@ -5021,11 +5021,11 @@ class SimulationController:
                     thickness=float(e.thickness),
                     lysis_batch_index=(int(prev_lysis_batch) if prev_lysis_batch is not None else None),
                     lysis_time=(float(prev_lysis_time) if prev_lysis_time is not None else None),
-                    segments=e.segments,  # Phase 2A: preserve spatial plasmin segments (updated by binding kinetics)
+                    segments=e.segments,  # preserve spatial plasmin segments (updated by binding kinetics)
                 )
             )
 
-        # Phase 3.0 cleavage density fail-safe (graceful termination before committing state).
+        # Cleavage density fail-safe (graceful termination before committing state).
         # ABORT BEHAVIOR FIX (Q5): Write log + stop gracefully (no re-raise).
         # In spatial mode, cleavage is by n_i -> 0 (not implemented yet), not by S -> 0.
         newly_cleaved = 0  # Initialize for both modes
@@ -5149,7 +5149,7 @@ class SimulationController:
         # e) relax once after degradation (propagates stiffness/damage changes to forces)
         adapter.relax(float(self.state.strain_value))
 
-        # Phase 3.0 post-relaxation sanity checks (abort).
+        # Post-relaxation sanity checks (abort).
         coords_post = adapter._relaxed_node_coords
         if coords_post is None:
             raise ValueError("Post-relaxation sanity check failed: missing relaxed node coordinates.")
@@ -5197,7 +5197,7 @@ class SimulationController:
         # time advances only by dt_used (may differ from base dt in spatial mode)
         self.state.time = float(self.state.time) + dt_used
 
-        # Phase 2.2: update prev_mean_tension at end of batch (after relaxation).
+        # Update prev_mean_tension at end of batch (after relaxation).
         if post_intact_forces:
             adapter.prev_mean_tension = float(sum(post_intact_forces) / len(post_intact_forces))
         else:
@@ -5221,7 +5221,7 @@ class SimulationController:
             "lysis_fraction": lysis_fraction,
         }
 
-        # Phase 3.7: deterministic batch_hash (end-to-end integrity) computed after success.
+        # Deterministic batch_hash (end-to-end integrity) computed after success.
         # Payload excludes forces/node positions/GUI state by design.
         batch_index = len(adapter.experiment_log)
         edges_sorted = sorted(adapter.edges, key=lambda ee: int(ee.edge_id))
@@ -5252,28 +5252,28 @@ class SimulationController:
         }
         batch_hash = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
 
-        # Phase 3.1 deterministic experiment logging (append-only; no timestamps).
+        # Deterministic experiment logging (append-only; no timestamps).
         # Append ONLY after a successful batch (i.e., after relaxation + sanity checks).
         intact_edges_post = sum(1 for e in adapter.edges if float(e.S) > 0.0)
         cleaved_edges_total = sum(1 for e in adapter.edges if float(e.S) <= 0.0)
         
-        # Phase 2B/2C (v5.0): Compute spatial plasmin observables
+        # Compute spatial plasmin observables
         n_min_frac = None
         n_mean_frac = None
         total_bound_plasmin = None
-        min_stiff_frac = None  # Phase 2C: min(S) over edges with segments
-        mean_stiff_frac = None  # Phase 2C: mean(S) over edges with segments
+        min_stiff_frac = None  # min(S) over edges with segments
+        mean_stiff_frac = None  # mean(S) over edges with segments
         if FeatureFlags.USE_SPATIAL_PLASMIN and adapter.spatial_plasmin_params is not None:
             N_pf = float(adapter.spatial_plasmin_params.get("N_pf", 50.0))
             all_n_fracs = []
             all_B_i = []
-            all_S_fracs = []  # Phase 2C: stiffness fractions
+            all_S_fracs = []  # stiffness fractions
             for e in adapter.edges:
                 if e.segments is not None:
                     for seg in e.segments:
                         all_n_fracs.append(float(seg.n_i) / N_pf)
                         all_B_i.append(float(seg.B_i))
-                    # Phase 2C: S now reflects f_edge = min(n_i/N_pf)
+                    # S now reflects f_edge = min(n_i/N_pf)
                     all_S_fracs.append(float(e.S))
             if all_n_fracs:
                 n_min_frac = float(min(all_n_fracs))
@@ -5284,7 +5284,7 @@ class SimulationController:
                 min_stiff_frac = float(min(all_S_fracs))
                 mean_stiff_frac = float(sum(all_S_fracs) / len(all_S_fracs))
 
-        # Phase 3E: Per-edge statistics (spatial mode only)
+        # Per-edge statistics (spatial mode only)
         # Compute detailed per-edge observables for JSON export
         per_edge_stats = {}
         edge_n_min_global = None
@@ -5353,20 +5353,20 @@ class SimulationController:
                 "newly_cleaved": int(newly_cleaved),
                 "mean_tension": float(post_mean_tension),
                 "lysis_fraction": float(lysis_fraction),
-                "dt_used": float(dt_used),  # Phase 2A: actual timestep used (may differ from base dt in spatial mode)
-                "n_min_frac": n_min_frac,  # Phase 2B: min(n_i/N_pf) over all segments (spatial mode only)
-                "n_mean_frac": n_mean_frac,  # Phase 2B: mean(n_i/N_pf) over all segments (spatial mode only)
-                "total_bound_plasmin": total_bound_plasmin,  # Phase 2B: sum(B_i) over all segments (spatial mode only)
-                "total_bound_this_batch": int(total_bound_plasmin) if (total_bound_plasmin is not None) else None,  # Phase 2G: sum(B_i) (integer quanta)
-                "min_stiff_frac": min_stiff_frac,  # Phase 2C: min(S=f_edge) over edges with segments (spatial mode only)
-                "mean_stiff_frac": mean_stiff_frac,  # Phase 2C: mean(S=f_edge) over edges with segments (spatial mode only)
-                # Phase 2G: Stochastic plasmin seeding observables (spatial mode only)
+                "dt_used": float(dt_used),  # actual timestep used (may differ from base dt in spatial mode)
+                "n_min_frac": n_min_frac,  # min(n_i/N_pf) over all segments (spatial mode only)
+                "n_mean_frac": n_mean_frac,  # mean(n_i/N_pf) over all segments (spatial mode only)
+                "total_bound_plasmin": total_bound_plasmin,  # sum(B_i) over all segments (spatial mode only)
+                "total_bound_this_batch": int(total_bound_plasmin) if (total_bound_plasmin is not None) else None,  # sum(B_i) (integer quanta)
+                "min_stiff_frac": min_stiff_frac,  # min(S=f_edge) over edges with segments (spatial mode only)
+                "mean_stiff_frac": mean_stiff_frac,  # mean(S=f_edge) over edges with segments (spatial mode only)
+                # Stochastic plasmin seeding observables (spatial mode only)
                 "P_total_quanta": int(adapter.P_total_quanta) if adapter.P_total_quanta is not None else None,
                 "P_free_quanta": int(adapter.P_free_quanta) if adapter.P_free_quanta is not None else None,
                 "bind_events_requested": int(bind_events_requested) if FeatureFlags.USE_SPATIAL_PLASMIN else None,
                 "bind_events_applied": int(bind_events_applied) if FeatureFlags.USE_SPATIAL_PLASMIN else None,
                 "total_unbound_this_batch": int(total_unbound_this_batch) if FeatureFlags.USE_SPATIAL_PLASMIN else None,
-                # Phase 3E: Per-edge statistics (spatial mode only)
+                # Per-edge statistics (spatial mode only)
                 "per_edge_stats": dict(per_edge_stats) if per_edge_stats else None,  # Full per-edge dict (JSON only)
                 "edge_n_min_global": edge_n_min_global,  # Global min of per-edge n_min (CSV aggregate)
                 "edge_n_mean_global": edge_n_mean_global,  # Global mean of per-edge n_mean (CSV aggregate)
@@ -5391,7 +5391,7 @@ class SimulationController:
             }
         )
 
-        # Phase 3.8: performance envelope warnings (diagnostic only; never abort).
+        # Performance envelope warnings (diagnostic only; never abort).
         self.last_batch_duration_sec = float(adapter.experiment_log[-1]["batch_duration_sec"])
         soft_warn_sec = 0.5
         hard_warn_sec = 2.0
@@ -5399,7 +5399,7 @@ class SimulationController:
             print(f"[ResearchSimulation] Warning: batch duration {self.last_batch_duration_sec:.3f}s exceeded soft threshold {soft_warn_sec:.3f}s")
         # UI-level non-blocking dialog for hard threshold is handled by the page (no controller UI calls).
 
-        # Phase 2E: Percolation-based termination (spatial mode only)
+        # Percolation-based termination (spatial mode only)
         # Check if network is still connected (left to right) after edge removal.
         # Legacy mode uses sigma_ref <= 0 termination (checked earlier).
         if FeatureFlags.USE_SPATIAL_PLASMIN:
@@ -5440,7 +5440,7 @@ class SimulationController:
 
     def run_n_batches(self, n: int):
         """
-        Phase 4.0 explicit multi-batch runner (deterministic, bounded, user-controlled).
+        explicit multi-batch runner (deterministic, bounded, user-controlled).
 
         Rules:
         - n must be a positive integer
@@ -5470,7 +5470,7 @@ class SimulationController:
 
     def resume_from_checkpoint(self, snapshot_path: str, log_path: str, resume_batch_index: int):
         """
-        Phase 4.1 controller wiring: resume deterministically from snapshot + log at a batch index.
+        controller wiring: resume deterministically from snapshot + log at a batch index.
         On success, replaces loaded adapter state and updates controller time/strain.
         """
         adapter = self.state.loaded_network
@@ -5494,7 +5494,7 @@ class SimulationController:
 
     def fork_from_checkpoint(self, snapshot_path: str, log_path: str, resume_batch_index: int):
         """
-        Phase 4.2 controller wiring: fork a new experimental branch from a checkpoint.
+        controller wiring: fork a new experimental branch from a checkpoint.
         Replaces the current adapter with the forked adapter (copy-on-write).
         """
         current = self.state.loaded_network
@@ -5533,7 +5533,7 @@ class SimulationController:
         batches_per_branch: int,
     ):
         """
-        Phase 4.3: deterministic fan-out parameter sweep from a checkpoint.
+        : deterministic fan-out parameter sweep from a checkpoint.
 
         For each sweep value:
         - fork a fresh adapter from checkpoint (copy-on-write)
@@ -5642,7 +5642,7 @@ class SimulationController:
         batches_per_branch: int,
     ):
         """
-        Phase 4.4: deterministic multi-parameter grid sweep (Cartesian, bounded; sequential).
+        : deterministic multi-parameter grid sweep (Cartesian, bounded; sequential).
 
         Constraints:
         - up to 2 parameters
@@ -5788,13 +5788,14 @@ class ResearchSimulationPage(TkinterView):
         self.max_time = tk.StringVar(value="")
         # Applied strain is a fixed experimental parameter (read once at Start).
         self.applied_strain_fixed = tk.StringVar(value="0.0")
-        # Phase 4.0: explicit multi-batch run control (validated; no automation)
+        self.strain_mode_var = tk.StringVar(value="Boundary Only")
+        # Explicit multi-batch run control (validated; no automation)
         self.batches_to_run = tk.StringVar(value="1")
-        # Phase 4.3: parameter sweep controls (validated; no async)
+        # Parameter sweep controls (validated; no async)
         self.sweep_param_name = tk.StringVar(value="")
         self.sweep_values_csv = tk.StringVar(value="")
         self.sweep_batches_per_branch = tk.StringVar(value="1")
-        # Phase 4.4: grid sweep controls
+        # Grid sweep controls
         self.grid_batches_per_branch = tk.StringVar(value="1")
         self._grid_param_text = None
 
@@ -5812,6 +5813,25 @@ class ResearchSimulationPage(TkinterView):
         self.metric_max_tension = tk.StringVar(value="--")
         self.metric_running = tk.StringVar(value=self._format_running_state())
         self.metric_paused = tk.StringVar(value=self._format_paused_state())
+
+        # Additional metrics for enhanced panel
+        self.metric_batch_number = tk.StringVar(value="--")
+        self.metric_time_sec = tk.StringVar(value="--")
+        self.metric_total_fibers = tk.StringVar(value="--")
+        self.metric_status = tk.StringVar(value="Idle")
+
+        # Plot data storage for real-time lysis, tension, and degradation plots
+        self._plot_batches: list[int] = []
+        self._plot_lysis_history: list[float] = []
+        self._plot_mean_tension_history: list[float] = []
+        self._plot_max_tension_history: list[float] = []
+        self._plot_mean_integrity_history: list[float] = []
+        self._plot_cleavage_events_history: list[int] = []
+        self._plot_fig = None
+        self._plot_canvas_widget = None
+        self._lysis_ax = None
+        self._tension_ax = None
+        self._degradation_ax = None
 
         # Label widget reference for dynamic styling (force spike warning)
         self.metric_max_tension_label = None
@@ -5890,17 +5910,39 @@ class ResearchSimulationPage(TkinterView):
         )
         subtitle.pack(fill=tk.X, padx=16, pady=(0, 10))
 
-        # Main split: left controls, right visualization
+        # Main split: left controls (scrollable), right visualization + plots
         main = tk.Frame(container, bg=self.BG_COLOR)
         main.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
 
-        main.grid_columnconfigure(0, weight=0, minsize=360)
+        main.grid_columnconfigure(0, weight=0, minsize=430)
         main.grid_columnconfigure(1, weight=1)
         main.grid_rowconfigure(0, weight=1)
 
-        left = tk.Frame(main, bg=self.BG_COLOR)
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        # Scrollable left panel
+        left_outer = tk.Frame(main, bg=self.BG_COLOR)
+        left_outer.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
 
+        left_canvas = tk.Canvas(left_outer, bg=self.BG_COLOR, highlightthickness=0, width=420)
+        left_scrollbar = tk.Scrollbar(left_outer, orient="vertical", command=left_canvas.yview)
+        left = tk.Frame(left_canvas, bg=self.BG_COLOR)
+
+        left.bind(
+            "<Configure>",
+            lambda e: left_canvas.configure(scrollregion=left_canvas.bbox("all"))
+        )
+        self._left_canvas_window = left_canvas.create_window((0, 0), window=left, anchor="nw", width=420)
+        left_canvas.configure(yscrollcommand=left_scrollbar.set)
+
+        left_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        left_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Mousewheel scrolling for the left panel
+        def _on_mousewheel(event):
+            left_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        left_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # Right panel: split into visualization (top) and plots (bottom)
         right = tk.Frame(main, bg=self.BG_COLOR)
         right.grid(row=0, column=1, sticky="nsew")
 
@@ -5910,14 +5952,14 @@ class ResearchSimulationPage(TkinterView):
         self._build_simulation_controls_section(left)
         self._build_metrics_section(left)
 
-        # Right: visualization panel with poles + static network sketch
+        # Right top: visualization panel
         self._build_visualization_section(right)
+        # Right bottom: real-time plots
+        self._build_plots_section(right)
 
         Logger.log("end ResearchSimulationPage.show_page(self, container)")
 
-    # ---------------------------
     # Section builders
-    # ---------------------------
     def _build_network_loading_section(self, parent):
         lf = tk.LabelFrame(
             parent,
@@ -5933,10 +5975,13 @@ class ResearchSimulationPage(TkinterView):
         path_entry = tk.Entry(
             lf,
             textvariable=self.selected_network_path,
-            bg="gray14",
-            fg=self.FG_COLOR,
-            insertbackground=self.FG_COLOR,
-            relief=tk.FLAT,
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            insertbackground="#e0e0e0",
+            relief=tk.GROOVE,
+            highlightbackground="#444444",
+            highlightcolor="#5588bb",
+            highlightthickness=1,
         )
         path_entry.pack(fill=tk.X, pady=(0, 8))
 
@@ -5945,11 +5990,11 @@ class ResearchSimulationPage(TkinterView):
 
         browse_btn = tk.Button(
             row,
-            text="Browse…",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            text="Browse...",
+            bg="#2d4a6a",
+            fg="#ffffff",
+            activebackground="#3d5a7a",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_browse_network_file,
@@ -5961,10 +6006,10 @@ class ResearchSimulationPage(TkinterView):
         load_btn = tk.Button(
             row,
             text="Load",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#2d6a4f",
+            fg="#ffffff",
+            activebackground="#3d7a5f",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_load_network_stub,
@@ -5976,10 +6021,10 @@ class ResearchSimulationPage(TkinterView):
         preview_btn = tk.Button(
             row,
             text="Preview Boundaries",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#3a3a4a",
+            fg="#ccccdd",
+            activebackground="#4a4a5a",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_preview_boundaries,
@@ -6017,13 +6062,54 @@ class ResearchSimulationPage(TkinterView):
         self._applied_strain_entry = tk.Entry(
             row,
             textvariable=self.applied_strain_fixed,
-            bg="gray14",
-            fg=self.FG_COLOR,
-            insertbackground=self.FG_COLOR,
-            relief=tk.FLAT,
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            insertbackground="#e0e0e0",
+            relief=tk.GROOVE,
+            highlightthickness=1,
+            highlightbackground="#555555",
+            highlightcolor="#6699cc",
             width=12,
         )
         self._applied_strain_entry.pack(side=tk.LEFT, padx=(8, 0))
+
+        # Strain mode selector: boundary-only (legacy) or affine (all fibers)
+        strain_mode_row = tk.Frame(lf, bg=self.BG_COLOR)
+        strain_mode_row.pack(fill=tk.X, pady=(0, 6))
+
+        strain_mode_lbl = tk.Label(
+            strain_mode_row,
+            text="Strain Mode",
+            bg=self.BG_COLOR,
+            fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT,
+            width=22,
+            anchor="w",
+        )
+        strain_mode_lbl.pack(side=tk.LEFT)
+
+        self._strain_mode_menu = tk.OptionMenu(
+            strain_mode_row,
+            self.strain_mode_var,
+            "Boundary Only",
+            "All Fibers (Affine)",
+        )
+        self._strain_mode_menu.configure(
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            activebackground="#3d3d3d",
+            activeforeground="#e0e0e0",
+            highlightthickness=0,
+            relief=tk.GROOVE,
+            width=18,
+        )
+        self._strain_mode_menu["menu"].configure(
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            activebackground="#4a6fa5",
+            activeforeground="#ffffff",
+        )
+        self._strain_mode_menu.pack(side=tk.LEFT, padx=(8, 0))
 
         # Plasmin concentration: GUI-controlled only (NOT read from Excel metadata)
         # Controls the cleavage rate λ₀ in Core V2 simulation
@@ -6050,10 +6136,11 @@ class ResearchSimulationPage(TkinterView):
         start_btn = tk.Button(
             row,
             text="Start",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#2d6a4f",
+            fg="#ffffff",
+            activebackground="#3d8a6f",
+            activeforeground="#ffffff",
+            font=("Consolas", 10, "bold"),
             borderwidth=0,
             cursor="hand2",
             command=self._on_start,
@@ -6065,10 +6152,10 @@ class ResearchSimulationPage(TkinterView):
         pause_btn = tk.Button(
             row,
             text="Pause",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#8a7e3b",
+            fg="#ffffff",
+            activebackground="#aa9e5b",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_pause,
@@ -6080,10 +6167,10 @@ class ResearchSimulationPage(TkinterView):
         stop_btn = tk.Button(
             row,
             text="Stop",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#8c3a3a",
+            fg="#ffffff",
+            activebackground="#ac5a5a",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_stop,
@@ -6098,10 +6185,10 @@ class ResearchSimulationPage(TkinterView):
         advance_btn = tk.Button(
             advance_row,
             text="Advance One Batch",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#2d5a8c",
+            fg="#ffffff",
+            activebackground="#4d7aac",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_advance_one_batch,
@@ -6138,9 +6225,13 @@ class ResearchSimulationPage(TkinterView):
             auto_pause_frame,
             textvariable=self.force_spike_threshold,
             width=10,
-            bg="gray18",
-            fg=self.FG_COLOR,
-            insertbackground=self.FG_COLOR,
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            insertbackground="#e0e0e0",
+            relief=tk.GROOVE,
+            highlightbackground="#444444",
+            highlightcolor="#5588bb",
+            highlightthickness=1,
         )
         threshold_entry.pack(side=tk.LEFT)
 
@@ -6203,10 +6294,10 @@ class ResearchSimulationPage(TkinterView):
         export_btn = tk.Button(
             export_row,
             text="Export Experiment Log",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#2d4a5a",
+            fg="#ffffff",
+            activebackground="#3d5a6a",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_export_experiment_log,
@@ -6221,10 +6312,10 @@ class ResearchSimulationPage(TkinterView):
         snapshot_btn = tk.Button(
             snapshot_row,
             text="Export Network Snapshot",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#2d4a5a",
+            fg="#ffffff",
+            activebackground="#3d5a6a",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_export_network_snapshot,
@@ -6239,10 +6330,10 @@ class ResearchSimulationPage(TkinterView):
         fractured_btn = tk.Button(
             fractured_row,
             text="Export Fractured History",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#2d4a5a",
+            fg="#ffffff",
+            activebackground="#3d5a6a",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_export_fractured_history,
@@ -6257,10 +6348,10 @@ class ResearchSimulationPage(TkinterView):
         degradation_btn = tk.Button(
             degradation_row,
             text="Export Degradation Order",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#2d4a5a",
+            fg="#ffffff",
+            activebackground="#3d5a6a",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_export_degradation_order,
@@ -6269,16 +6360,35 @@ class ResearchSimulationPage(TkinterView):
         )
         degradation_btn.pack(side=tk.LEFT)
 
+        # Export Diagnostics (tension/strain distributions, rupture reasons)
+        diag_row = tk.Frame(lf, bg=self.BG_COLOR)
+        diag_row.pack(fill=tk.X, pady=(8, 0))
+
+        diag_btn = tk.Button(
+            diag_row,
+            text="Export Diagnostics",
+            bg="#2d5a27",
+            fg="#ffffff",
+            activebackground="#4d7a47",
+            activeforeground="#ffffff",
+            borderwidth=0,
+            cursor="hand2",
+            command=self._on_export_diagnostics,
+            padx=12,
+            pady=8,
+        )
+        diag_btn.pack(side=tk.LEFT)
+
         replay_row = tk.Frame(lf, bg=self.BG_COLOR)
         replay_row.pack(fill=tk.X, pady=(8, 0))
 
         replay_btn = tk.Button(
             replay_row,
             text="Replay Batch Check",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#3a3a2a",
+            fg="#cccc88",
+            activebackground="#4a4a3a",
+            activeforeground="#eeee99",
             borderwidth=0,
             cursor="hand2",
             command=self._on_replay_batch_check,
@@ -6287,7 +6397,7 @@ class ResearchSimulationPage(TkinterView):
         )
         replay_btn.pack(side=tk.LEFT)
 
-        # Phase 4.0: bounded, explicit N-batch runner controls
+        # Bounded, explicit N-batch runner controls
         run_row = tk.Frame(lf, bg=self.BG_COLOR)
         run_row.pack(fill=tk.X, pady=(10, 0))
 
@@ -6304,10 +6414,13 @@ class ResearchSimulationPage(TkinterView):
         run_entry = tk.Entry(
             run_row,
             textvariable=self.batches_to_run,
-            bg="gray14",
-            fg=self.FG_COLOR,
-            insertbackground=self.FG_COLOR,
-            relief=tk.FLAT,
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            insertbackground="#e0e0e0",
+            relief=tk.GROOVE,
+            highlightbackground="#444444",
+            highlightcolor="#5588bb",
+            highlightthickness=1,
             width=8,
         )
         run_entry.pack(side=tk.LEFT, padx=(10, 10))
@@ -6315,10 +6428,10 @@ class ResearchSimulationPage(TkinterView):
         run_btn = tk.Button(
             run_row,
             text="Run N Batches",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#2d6a4f",
+            fg="#ffffff",
+            activebackground="#3d7a5f",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_run_n_batches,
@@ -6327,17 +6440,17 @@ class ResearchSimulationPage(TkinterView):
         )
         run_btn.pack(side=tk.LEFT)
 
-        # Phase 4.1: deterministic checkpoint resume (explicit action)
+        # Deterministic checkpoint resume (explicit action)
         resume_row = tk.Frame(lf, bg=self.BG_COLOR)
         resume_row.pack(fill=tk.X, pady=(10, 0))
 
         resume_btn = tk.Button(
             resume_row,
             text="Resume From Checkpoint",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#2d5a8c",
+            fg="#ffffff",
+            activebackground="#3d6a9c",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_resume_from_checkpoint,
@@ -6352,10 +6465,10 @@ class ResearchSimulationPage(TkinterView):
         fork_btn = tk.Button(
             fork_row,
             text="Fork From Checkpoint",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#2d5a8c",
+            fg="#ffffff",
+            activebackground="#3d6a9c",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_fork_from_checkpoint,
@@ -6364,7 +6477,7 @@ class ResearchSimulationPage(TkinterView):
         )
         fork_btn.pack(side=tk.LEFT)
 
-        # Phase 4.3: deterministic parameter sweep (fan-out)
+        # Deterministic parameter sweep (fan-out)
         sweep_row = tk.Frame(lf, bg=self.BG_COLOR)
         sweep_row.pack(fill=tk.X, pady=(10, 0))
 
@@ -6381,10 +6494,13 @@ class ResearchSimulationPage(TkinterView):
         sweep_param_entry = tk.Entry(
             sweep_row,
             textvariable=self.sweep_param_name,
-            bg="gray14",
-            fg=self.FG_COLOR,
-            insertbackground=self.FG_COLOR,
-            relief=tk.FLAT,
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            insertbackground="#e0e0e0",
+            relief=tk.GROOVE,
+            highlightbackground="#444444",
+            highlightcolor="#5588bb",
+            highlightthickness=1,
             width=18,
         )
         sweep_param_entry.grid(row=0, column=1, padx=(10, 0), sticky="w")
@@ -6402,10 +6518,13 @@ class ResearchSimulationPage(TkinterView):
         sweep_vals_entry = tk.Entry(
             sweep_row,
             textvariable=self.sweep_values_csv,
-            bg="gray14",
-            fg=self.FG_COLOR,
-            insertbackground=self.FG_COLOR,
-            relief=tk.FLAT,
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            insertbackground="#e0e0e0",
+            relief=tk.GROOVE,
+            highlightbackground="#444444",
+            highlightcolor="#5588bb",
+            highlightthickness=1,
             width=28,
         )
         sweep_vals_entry.grid(row=1, column=1, padx=(10, 0), sticky="w", pady=(8, 0))
@@ -6423,10 +6542,13 @@ class ResearchSimulationPage(TkinterView):
         sweep_batches_entry = tk.Entry(
             sweep_row,
             textvariable=self.sweep_batches_per_branch,
-            bg="gray14",
-            fg=self.FG_COLOR,
-            insertbackground=self.FG_COLOR,
-            relief=tk.FLAT,
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            insertbackground="#e0e0e0",
+            relief=tk.GROOVE,
+            highlightbackground="#444444",
+            highlightcolor="#5588bb",
+            highlightthickness=1,
             width=8,
         )
         sweep_batches_entry.grid(row=2, column=1, padx=(10, 0), sticky="w", pady=(8, 0))
@@ -6434,10 +6556,10 @@ class ResearchSimulationPage(TkinterView):
         sweep_btn = tk.Button(
             sweep_row,
             text="Run Parameter Sweep",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#5a3a6a",
+            fg="#ffffff",
+            activebackground="#6a4a7a",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_run_parameter_sweep,
@@ -6446,7 +6568,7 @@ class ResearchSimulationPage(TkinterView):
         )
         sweep_btn.grid(row=3, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
-        # Phase 4.4: grid sweep UI (JSON input)
+        # Grid sweep UI (JSON input)
         grid_row = tk.Frame(lf, bg=self.BG_COLOR)
         grid_row.pack(fill=tk.X, pady=(12, 0))
 
@@ -6490,10 +6612,13 @@ class ResearchSimulationPage(TkinterView):
         grid_bp_entry = tk.Entry(
             grid_bp_row,
             textvariable=self.grid_batches_per_branch,
-            bg="gray14",
-            fg=self.FG_COLOR,
-            insertbackground=self.FG_COLOR,
-            relief=tk.FLAT,
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            insertbackground="#e0e0e0",
+            relief=tk.GROOVE,
+            highlightbackground="#444444",
+            highlightcolor="#5588bb",
+            highlightthickness=1,
             width=8,
         )
         grid_bp_entry.pack(side=tk.LEFT, padx=(10, 10))
@@ -6501,10 +6626,10 @@ class ResearchSimulationPage(TkinterView):
         grid_btn = tk.Button(
             grid_bp_row,
             text="Run Grid Sweep",
-            bg="gray18",
-            fg=self.FG_COLOR,
-            activebackground="gray20",
-            activeforeground=self.FG_COLOR,
+            bg="#5a3a6a",
+            fg="#ffffff",
+            activebackground="#6a4a7a",
+            activeforeground="#ffffff",
             borderwidth=0,
             cursor="hand2",
             command=self._on_run_grid_sweep,
@@ -6527,20 +6652,72 @@ class ResearchSimulationPage(TkinterView):
         )
         lf.pack(fill=tk.X)
 
+        # Status banner
+        self._status_banner = tk.Label(
+            lf,
+            textvariable=self.metric_status,
+            bg="#1a3a1a",
+            fg="#66cc66",
+            font=(self.view.FONT_FAMILY, 11, "bold"),
+            anchor="center",
+            pady=4,
+        )
+        self._status_banner.pack(fill=tk.X, pady=(0, 8))
+
+        # Batch / Time row
+        batch_time_frame = tk.Frame(lf, bg=self.BG_COLOR)
+        batch_time_frame.pack(fill=tk.X, pady=(0, 6))
+
+        batch_box = tk.Frame(batch_time_frame, bg="#1a2a3a", padx=8, pady=4)
+        batch_box.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        tk.Label(batch_box, text="Batch", bg="#1a2a3a", fg="#6699cc",
+                 font=(self.view.FONT_FAMILY, 9)).pack(anchor="w")
+        tk.Label(batch_box, textvariable=self.metric_batch_number, bg="#1a2a3a",
+                 fg="#ffffff", font=(self.view.FONT_FAMILY, 14, "bold")).pack(anchor="w")
+
+        time_box = tk.Frame(batch_time_frame, bg="#1a2a3a", padx=8, pady=4)
+        time_box.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
+        tk.Label(time_box, text="Time (s)", bg="#1a2a3a", fg="#6699cc",
+                 font=(self.view.FONT_FAMILY, 9)).pack(anchor="w")
+        tk.Label(time_box, textvariable=self.metric_time_sec, bg="#1a2a3a",
+                 fg="#ffffff", font=(self.view.FONT_FAMILY, 14, "bold")).pack(anchor="w")
+
+        # Fiber counts (colored)
+        fiber_frame = tk.Frame(lf, bg=self.BG_COLOR)
+        fiber_frame.pack(fill=tk.X, pady=(0, 6))
+
+        total_box = tk.Frame(fiber_frame, bg="#1a2a2a", padx=6, pady=3)
+        total_box.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
+        tk.Label(total_box, text="Total", bg="#1a2a2a", fg="#888888",
+                 font=(self.view.FONT_FAMILY, 9)).pack(anchor="w")
+        tk.Label(total_box, textvariable=self.metric_total_fibers, bg="#1a2a2a",
+                 fg="#cccccc", font=(self.view.FONT_FAMILY, 12, "bold")).pack(anchor="w")
+
+        active_box = tk.Frame(fiber_frame, bg="#1a2a1a", padx=6, pady=3)
+        active_box.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(3, 3))
+        tk.Label(active_box, text="Active", bg="#1a2a1a", fg="#448844",
+                 font=(self.view.FONT_FAMILY, 9)).pack(anchor="w")
+        tk.Label(active_box, textvariable=self.metric_active_fibers, bg="#1a2a1a",
+                 fg="#66cc66", font=(self.view.FONT_FAMILY, 12, "bold")).pack(anchor="w")
+
+        cleaved_box = tk.Frame(fiber_frame, bg="#2a1a1a", padx=6, pady=3)
+        cleaved_box.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(3, 0))
+        tk.Label(cleaved_box, text="Cleaved", bg="#2a1a1a", fg="#884444",
+                 font=(self.view.FONT_FAMILY, 9)).pack(anchor="w")
+        tk.Label(cleaved_box, textvariable=self.metric_cleaved_fibers, bg="#2a1a1a",
+                 fg="#cc6666", font=(self.view.FONT_FAMILY, 12, "bold")).pack(anchor="w")
+
+        # Standard metric rows
         self._metric_row(lf, "Time (minutes)", self.metric_time_min)
-        self._metric_row(lf, "Running", self.metric_running)
-        self._metric_row(lf, "Paused", self.metric_paused)
         self._metric_row(lf, "Lysis %", self.metric_lysis_pct)
-        self._metric_row(lf, "Active fibers", self.metric_active_fibers)
-        self._metric_row(lf, "Cleaved fibers", self.metric_cleaved_fibers)
-        self._metric_row(lf, "Mean tension", self.metric_mean_tension)
+        self._metric_row(lf, "Mean tension (N)", self.metric_mean_tension)
 
         # Max tension with dynamic color warning for force spikes
         max_tension_row = tk.Frame(lf, bg=self.BG_COLOR)
         max_tension_row.pack(fill=tk.X, pady=2)
         tk.Label(
             max_tension_row,
-            text="Max tension",
+            text="Max tension (N)",
             bg=self.BG_COLOR,
             fg=self.FG_COLOR,
             font=self.SUBHEADING_2_FONT,
@@ -6571,40 +6748,7 @@ class ResearchSimulationPage(TkinterView):
         # Visualization mode variable
         self._viz_mode = tk.StringVar(value="strain")  # "strain" or "relaxed"
 
-        # NOTE: Visualization mode toggle (Strain Heatmap vs Relaxed Network) temporarily hidden
-        # Relaxed Network feature is preserved but UI access is disabled
-        # Uncomment the section below to re-enable the toggle:
-        #
-        # toggle_frame = tk.Frame(lf, bg=self.BG_COLOR)
-        # toggle_frame.pack(fill=tk.X, pady=(0, 5))
-        #
-        # tk.Radiobutton(
-        #     toggle_frame,
-        #     text="Strain Heatmap",
-        #     variable=self._viz_mode,
-        #     value="strain",
-        #     command=self._on_viz_mode_change,
-        #     bg=self.BG_COLOR,
-        #     fg=self.FG_COLOR,
-        #     selectcolor="gray14",
-        #     activebackground=self.BG_COLOR,
-        #     activeforeground=self.FG_COLOR,
-        #     font=self.SUBHEADING_2_FONT
-        # ).pack(side=tk.LEFT, padx=5)
-        #
-        # tk.Radiobutton(
-        #     toggle_frame,
-        #     text="Relaxed Network",
-        #     variable=self._viz_mode,
-        #     value="relaxed",
-        #     command=self._on_viz_mode_change,
-        #     bg=self.BG_COLOR,
-        #     fg=self.FG_COLOR,
-        #     selectcolor="gray14",
-        #     activebackground=self.BG_COLOR,
-        #     activeforeground=self.FG_COLOR,
-        #     font=self.SUBHEADING_2_FONT
-        # ).pack(side=tk.LEFT, padx=5)
+        # Visualization mode toggle is hidden; Relaxed Network feature preserved but UI access disabled.
 
         self._viz_canvas = tk.Canvas(
             lf,
@@ -6632,9 +6776,172 @@ class ResearchSimulationPage(TkinterView):
         self._viz_canvas.bind("<Leave>", self._on_canvas_leave)
         self._redraw_visualization()
 
-    # ---------------------------
+    def _build_plots_section(self, parent):
+        """Build real-time lysis, tension, and degradation plots using matplotlib."""
+        lf = tk.LabelFrame(
+            parent,
+            text="Real-Time Plots",
+            bg=self.BG_COLOR,
+            fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT,
+            padx=5,
+            pady=5,
+        )
+        lf.pack(fill=tk.X, pady=(8, 0))
+
+        # Create matplotlib figure with dark theme (3 subplots)
+        self._plot_fig = Figure(figsize=(6, 5.5), dpi=80, facecolor="#1a1a1a")
+        self._plot_fig.subplots_adjust(hspace=0.6, left=0.12, right=0.85, top=0.95, bottom=0.08)
+
+        # Lysis plot (top)
+        self._lysis_ax = self._plot_fig.add_subplot(3, 1, 1)
+        self._lysis_ax.set_facecolor("#1a1a1a")
+        self._lysis_ax.set_ylabel("Lysis %", fontsize=8, color="#aaaaaa")
+        self._lysis_ax.set_title("Lysis Progression", fontsize=9, color="#cccccc")
+        self._lysis_ax.tick_params(colors="#888888", labelsize=7)
+        for spine in self._lysis_ax.spines.values():
+            spine.set_color("#333333")
+
+        # Tension plot (middle)
+        self._tension_ax = self._plot_fig.add_subplot(3, 1, 2)
+        self._tension_ax.set_facecolor("#1a1a1a")
+        self._tension_ax.set_ylabel("Tension (N)", fontsize=8, color="#aaaaaa")
+        self._tension_ax.set_title("Tension History", fontsize=9, color="#cccccc")
+        self._tension_ax.tick_params(colors="#888888", labelsize=7)
+        for spine in self._tension_ax.spines.values():
+            spine.set_color("#333333")
+
+        # Degradation plot (bottom) — shows mean integrity and cleavage events
+        self._degradation_ax = self._plot_fig.add_subplot(3, 1, 3)
+        self._degradation_ax.set_facecolor("#1a1a1a")
+        self._degradation_ax.set_xlabel("Batch", fontsize=8, color="#aaaaaa")
+        self._degradation_ax.set_ylabel("Integrity", fontsize=8, color="#aaaaaa")
+        self._degradation_ax.set_title("Network Degradation", fontsize=9, color="#cccccc")
+        self._degradation_ax.tick_params(colors="#888888", labelsize=7)
+        for spine in self._degradation_ax.spines.values():
+            spine.set_color("#333333")
+
+        # Embed in tkinter
+        self._plot_canvas_widget = FigureCanvasTkAgg(self._plot_fig, master=lf)
+        self._plot_canvas_widget.get_tk_widget().pack(fill=tk.X, expand=False)
+        self._plot_canvas_widget.draw()
+
+        # Clear plots button
+        clear_btn = tk.Button(
+            lf,
+            text="Clear Plots",
+            bg="#333333",
+            fg="#cccccc",
+            activebackground="#444444",
+            activeforeground="#ffffff",
+            borderwidth=0,
+            cursor="hand2",
+            command=self._on_clear_plots,
+            padx=8,
+            pady=4,
+        )
+        clear_btn.pack(anchor="e", pady=(4, 0))
+
+    def _record_plot_data(self, batch_num: int, lysis_pct: float, mean_tension: float, max_tension: float,
+                          mean_integrity: float = 1.0, n_cleavage_events: int = 0):
+        """Record a data point for the real-time plots (lysis, tension, degradation)."""
+        self._plot_batches.append(batch_num)
+        self._plot_lysis_history.append(lysis_pct)
+        self._plot_mean_tension_history.append(mean_tension)
+        self._plot_max_tension_history.append(max_tension)
+        self._plot_mean_integrity_history.append(mean_integrity)
+        self._plot_cleavage_events_history.append(n_cleavage_events)
+        # Only redraw plots every 10 batches to prevent matplotlib from choking the event loop
+        if batch_num % 10 == 0 or not self.controller.state.is_running:
+            self._update_plots()
+
+    def _update_plots(self):
+        """Redraw the real-time plots with current data (lysis, tension, degradation)."""
+        if self._lysis_ax is None or self._tension_ax is None or self._plot_canvas_widget is None:
+            return
+
+        # Update lysis plot
+        self._lysis_ax.clear()
+        self._lysis_ax.set_facecolor("#1a1a1a")
+        self._lysis_ax.set_ylabel("Lysis %", fontsize=8, color="#aaaaaa")
+        self._lysis_ax.set_title("Lysis Progression", fontsize=9, color="#cccccc")
+        self._lysis_ax.tick_params(colors="#888888", labelsize=7)
+        for spine in self._lysis_ax.spines.values():
+            spine.set_color("#333333")
+        if self._plot_batches:
+            self._lysis_ax.plot(self._plot_batches, self._plot_lysis_history,
+                               color="#ff6666", linewidth=1.5, marker="o", markersize=3)
+            self._lysis_ax.fill_between(self._plot_batches, self._plot_lysis_history,
+                                        alpha=0.15, color="#ff6666")
+
+        # Update tension plot
+        self._tension_ax.clear()
+        self._tension_ax.set_facecolor("#1a1a1a")
+        self._tension_ax.set_ylabel("Tension (N)", fontsize=8, color="#aaaaaa")
+        self._tension_ax.set_title("Tension History", fontsize=9, color="#cccccc")
+        self._tension_ax.tick_params(colors="#888888", labelsize=7)
+        for spine in self._tension_ax.spines.values():
+            spine.set_color("#333333")
+        if self._plot_batches:
+            self._tension_ax.plot(self._plot_batches, self._plot_mean_tension_history,
+                                  color="#66aaff", linewidth=1.5, label="Mean", marker="o", markersize=3)
+            self._tension_ax.plot(self._plot_batches, self._plot_max_tension_history,
+                                  color="#ffaa44", linewidth=1.0, label="Max", linestyle="--", marker="s", markersize=2)
+            self._tension_ax.legend(fontsize=7, facecolor="#1a1a1a", edgecolor="#333333",
+                                    labelcolor="#aaaaaa", loc="upper right")
+
+        # Update degradation plot (mean integrity + cleavage events)
+        if self._degradation_ax is not None:
+            self._degradation_ax.clear()
+            self._degradation_ax.set_facecolor("#1a1a1a")
+            self._degradation_ax.set_xlabel("Batch", fontsize=8, color="#aaaaaa")
+            self._degradation_ax.set_ylabel("Mean S", fontsize=8, color="#aaaaaa")
+            self._degradation_ax.set_title("Network Degradation", fontsize=9, color="#cccccc")
+            self._degradation_ax.tick_params(colors="#888888", labelsize=7)
+            for spine in self._degradation_ax.spines.values():
+                spine.set_color("#333333")
+            if self._plot_batches and self._plot_mean_integrity_history:
+                self._degradation_ax.plot(self._plot_batches, self._plot_mean_integrity_history,
+                                          color="#66cc66", linewidth=1.5, label="Mean Integrity (S)")
+                self._degradation_ax.fill_between(self._plot_batches, self._plot_mean_integrity_history,
+                                                   alpha=0.1, color="#66cc66")
+                self._degradation_ax.set_ylim(-0.05, 1.05)
+
+                # Reuse cached twin axis to avoid memory leak
+                if not hasattr(self, '_degradation_ax2') or self._degradation_ax2 is None:
+                    self._degradation_ax2 = self._degradation_ax.twinx()
+                ax2 = self._degradation_ax2
+                ax2.clear()
+                ax2.set_facecolor("#1a1a1a")
+                ax2.plot(self._plot_batches, self._plot_cleavage_events_history,
+                         color="#ff9944", linewidth=1.0, linestyle="--", label="Cleavage Events")
+                ax2.set_ylabel("Cleavage Events", fontsize=8, color="#ff9944")
+                ax2.tick_params(colors="#ff9944", labelsize=7)
+                ax2.spines['right'].set_color("#ff9944")
+
+                lines1, labels1 = self._degradation_ax.get_legend_handles_labels()
+                lines2, labels2 = ax2.get_legend_handles_labels()
+                self._degradation_ax.legend(lines1 + lines2, labels1 + labels2,
+                                            fontsize=7, facecolor="#1a1a1a", edgecolor="#333333",
+                                            labelcolor="#aaaaaa", loc="center right")
+
+        try:
+            self._plot_canvas_widget.draw_idle()
+        except Exception:
+            pass
+
+    def _on_clear_plots(self):
+        """Clear all plot data and redraw empty plots."""
+        self._plot_batches.clear()
+        self._plot_lysis_history.clear()
+        self._plot_mean_tension_history.clear()
+        self._plot_max_tension_history.clear()
+        self._plot_mean_integrity_history.clear()
+        self._plot_cleavage_events_history.clear()
+        self._degradation_ax2 = None
+        self._update_plots()
+
     # Small UI helpers
-    # ---------------------------
     def _kv_row(self, parent, label_text, var):
         row = tk.Frame(parent, bg=self.BG_COLOR)
         row.pack(fill=tk.X, pady=3)
@@ -6645,7 +6952,7 @@ class ResearchSimulationPage(TkinterView):
             bg=self.BG_COLOR,
             fg=self.FG_COLOR,
             font=self.SUBHEADING_2_FONT,
-            width=18,
+            width=22,
             anchor="w",
         )
         lbl.pack(side=tk.LEFT)
@@ -6653,10 +6960,13 @@ class ResearchSimulationPage(TkinterView):
         entry = tk.Entry(
             row,
             textvariable=var,
-            bg="gray14",
-            fg=self.FG_COLOR,
-            insertbackground=self.FG_COLOR,
-            relief=tk.FLAT,
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            insertbackground="#e0e0e0",
+            relief=tk.GROOVE,
+            highlightthickness=1,
+            highlightbackground="#555555",
+            highlightcolor="#6699cc",
         )
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
@@ -6684,9 +6994,7 @@ class ResearchSimulationPage(TkinterView):
         )
         val.pack(side=tk.RIGHT)
 
-    # ---------------------------
     # Callbacks (stubs)
-    # ---------------------------
     def _on_back_to_home(self):
         Logger.log("ResearchSimulationPage: back to input page")
         self.view.show_page("input")
@@ -6929,13 +7237,18 @@ class ResearchSimulationPage(TkinterView):
             if not result:
                 return
 
+        # Resolve strain mode from dropdown
+        mode_text = self.strain_mode_var.get()
+        strain_mode = "affine" if "Affine" in mode_text else "boundary_only"
+
         # Configure and start Core V2
         try:
             adapter.configure_parameters(
                 plasmin_concentration=plasmin_conc,
                 time_step=dt,
                 max_time=max_time,
-                applied_strain=strain
+                applied_strain=strain,
+                strain_mode=strain_mode
             )
             adapter.start_simulation()
 
@@ -6945,15 +7258,13 @@ class ResearchSimulationPage(TkinterView):
             # Start non-blocking loop
             self._run_core_v2_step()
 
-            print(f"[Core V2] Simulation started")
-
         except Exception as e:
             messagebox.showerror("Start Error", f"Failed to start:\n{str(e)}")
             import traceback
             traceback.print_exc()
 
     def _run_core_v2_step(self):
-        """Non-blocking simulation loop for Core V2 (Catch C mitigation)."""
+        """Non-blocking simulation loop for Core V2 with adaptive frame timing."""
         if not self.controller.state.is_running or self.controller.state.is_paused:
             return
 
@@ -6961,62 +7272,96 @@ class ResearchSimulationPage(TkinterView):
         if not isinstance(adapter, CoreV2GUIAdapter):
             return
 
-        # Catch B: Batch physics steps per GUI frame (scaled by speed multiplier)
-        batch_size = max(1, int(10 * self.speed_multiplier.get()))
-        cleaved_this_batch = 0
-        for _ in range(batch_size):
-            continue_sim = adapter.advance_one_batch()
+        try:
+            import time as _time
+            frame_start = _time.perf_counter()
+            # Adaptive batch count: run batches until we exceed a time budget (60ms)
+            # This prevents the event loop from starving on large networks
+            max_batch_time_sec = 0.06  # 60ms budget for physics
+            target_batches = max(1, int(self.speed_multiplier.get()))
+            batches_done = 0
+            for _ in range(target_batches):
+                continue_sim = adapter.advance_one_batch()
+                batches_done += 1
 
-            if not continue_sim:
-                # Simulation terminated
-                self.controller.state.is_running = False
-                print(f"[Core V2 Simulation] TERMINATED: {adapter.termination_reason}")
-                print(f"[Core V2 Simulation] Final time: {adapter.get_current_time():.2f}s")
-                print(f"[Core V2 Simulation] Clearance fraction: {adapter.get_lysis_fraction():.3f}")
-                print(f"[Core V2 Simulation] Total fibers cleaved: {adapter.simulation.state.n_ruptured if adapter.simulation else 0}")
+                if not continue_sim:
+                    # Simulation terminated — handle below
+                    pass
+                elif (_time.perf_counter() - frame_start) > max_batch_time_sec:
+                    break  # Time budget exceeded — yield to event loop
 
-                # Final render
-                self._render_core_v2_network()
-                self._update_core_v2_metrics()
+                if not continue_sim:
+                    self.controller.state.is_running = False
+                    t_final = adapter.get_current_time()
+                    lysis_final = adapter.get_lysis_fraction()
+                    n_ruptured = adapter.simulation.state.n_ruptured if adapter.simulation else 0
+                    n_total = len(adapter.simulation.state.fibers) if adapter.simulation else 0
+                    reason = adapter.termination_reason or "unknown"
 
-                messagebox.showinfo("Complete",
-                    f"Simulation complete\n"
-                    f"Reason: {adapter.termination_reason}\n"
-                    f"Time: {adapter.get_current_time():.2f}s\n"
-                    f"Clearance: {adapter.get_lysis_fraction():.1%}")
-                return
+                    self._render_core_v2_network()
+                    self._update_core_v2_metrics()
 
-        # Update GUI
-        self._render_core_v2_network()
-        self._update_core_v2_metrics()
+                    msg_lines = [
+                        f"Simulation complete",
+                        f"",
+                        f"Termination: {reason}",
+                        f"Time: {t_final:.2f}s ({t_final/60:.1f} min)",
+                        f"Lysis: {lysis_final:.1%}",
+                        f"Fibers cleaved: {n_ruptured} / {n_total}",
+                    ]
 
-        # Auto-pause on force spike check
-        if self.enable_auto_pause.get():
-            max_tension = adapter.get_max_tension()
-            threshold = self.force_spike_threshold.get()
-            if max_tension > threshold:
-                self.controller.state.is_paused = True
-                messagebox.showwarning(
-                    "Force Spike Detected",
-                    f"Simulation auto-paused due to high force:\n\n"
-                    f"Max tension: {max_tension:.3e} N\n"
-                    f"Threshold: {threshold:.3e} N\n"
-                    f"Current time: {adapter.get_current_time():.2f}s\n\n"
-                    f"Inspect network visualization and metrics.\n"
-                    f"Click 'Pause' button again to resume, or adjust threshold."
-                )
-                return  # Stop loop
+                    if reason == "network_cleared" and adapter.simulation and adapter.simulation.state.clearance_event:
+                        event = adapter.simulation.state.clearance_event
+                        msg_lines.append(f"")
+                        msg_lines.append(f"Percolation Details:")
+                        msg_lines.append(f"Critical fiber: #{event.get('critical_fiber_id', '?')}")
+                        msg_lines.append(f"Remaining intact: {event.get('remaining_fibers', '?')}")
+                        msg_lines.append(f"")
+                        msg_lines.append(f"The network visualization now shows the")
+                        msg_lines.append(f"aftermath with disconnected components.")
 
-        # Heartbeat logging (every ~100 batches)
-        if adapter.simulation and adapter.simulation.state.time % 1.0 < 0.01:  # Every ~1 second
-            t = adapter.get_current_time()
-            clearance = adapter.get_lysis_fraction()
-            n_cleaved = adapter.simulation.state.n_ruptured
-            print(f"[Core V2 Heartbeat] t={t:.2f}s, clearance={clearance:.1%}, cleaved={n_cleaved}")
+                    messagebox.showinfo("Simulation Complete", "\n".join(msg_lines))
 
-        # Schedule next frame (Catch C: non-blocking)
+                    if reason == "network_cleared":
+                        try:
+                            self._render_relaxed_core_v2_network()
+                        except Exception:
+                            pass
+                    return
+
+            # Update GUI
+            self._render_core_v2_network()
+            self._update_core_v2_metrics()
+
+            # Auto-pause on force spike check
+            if self.enable_auto_pause.get():
+                max_tension = adapter.get_max_tension()
+                threshold = self.force_spike_threshold.get()
+                if max_tension > threshold:
+                    self.controller.state.is_paused = True
+                    messagebox.showwarning(
+                        "Force Spike Detected",
+                        f"Simulation auto-paused due to high force:\n\n"
+                        f"Max tension: {max_tension:.3e} N\n"
+                        f"Threshold: {threshold:.3e} N\n"
+                        f"Current time: {adapter.get_current_time():.2f}s\n\n"
+                        f"Inspect network visualization and metrics.\n"
+                        f"Click 'Pause' button again to resume, or adjust threshold."
+                    )
+                    return
+
+        except Exception as e:
+            # Prevent silent loop death — log the error and stop gracefully
+            print(f"[Core V2] Simulation error: {e}")
+            import traceback
+            traceback.print_exc()
+            self.controller.state.is_running = False
+            messagebox.showerror("Simulation Error", f"Simulation stopped due to error:\n\n{str(e)}")
+            return
+
+        # Schedule next frame with enough delay for Tkinter to process UI events
         if self._viz_canvas and self._viz_canvas.winfo_exists():
-            self._viz_canvas.after(0, self._run_core_v2_step)
+            self._viz_canvas.after(80, self._run_core_v2_step)
 
     def _compute_strain_color(self, strain: float) -> str:
         """
@@ -7063,38 +7408,151 @@ class ResearchSimulationPage(TkinterView):
 
         return f"#{r:02X}{g:02X}{b:02X}"
 
+    def _compute_tension_color(self, tension: float, max_tension: float) -> str:
+        """
+        Map fiber tension to color using gradient: blue -> cyan -> green -> yellow -> red.
+        Normalized to the range [0, max_tension].
+        """
+        if max_tension <= 0:
+            return "#4488FF"  # Default blue
+
+        t = min(tension / max_tension, 1.0) if max_tension > 0 else 0.0
+
+        keypoints = [
+            (0.0,  (0x44, 0x88, 0xFF)),  # Blue (low tension)
+            (0.25, (0x44, 0xFF, 0xFF)),  # Cyan
+            (0.50, (0x44, 0xFF, 0x44)),  # Green
+            (0.75, (0xFF, 0xFF, 0x44)),  # Yellow
+            (1.0,  (0xFF, 0x44, 0x44)),  # Red (high tension)
+        ]
+
+        if t <= keypoints[0][0]:
+            r, g, b = keypoints[0][1]
+        elif t >= keypoints[-1][0]:
+            r, g, b = keypoints[-1][1]
+        else:
+            for i in range(len(keypoints) - 1):
+                t_low, (r_low, g_low, b_low) = keypoints[i]
+                t_high, (r_high, g_high, b_high) = keypoints[i + 1]
+                if t_low <= t <= t_high:
+                    frac = (t - t_low) / (t_high - t_low)
+                    r = int(r_low + frac * (r_high - r_low))
+                    g = int(g_low + frac * (g_high - g_low))
+                    b = int(b_low + frac * (b_high - b_low))
+                    break
+
+        return f"#{r:02X}{g:02X}{b:02X}"
+
+    def _draw_color_legend(self, x_start: int, y_start: int, height: int = 150, width: int = 15):
+        """Draw a vertical color legend on the visualization canvas."""
+        if self._viz_canvas is None:
+            return
+
+        n_steps = 50
+        step_h = height / n_steps
+        for i in range(n_steps):
+            t = i / n_steps
+            color = self._compute_tension_color(t, 1.0)
+            y0 = y_start + int(i * step_h)
+            y1 = y_start + int((i + 1) * step_h)
+            self._viz_canvas.create_rectangle(
+                x_start, y0, x_start + width, y1,
+                fill=color, outline="", tags="network"
+            )
+
+        # Labels
+        self._viz_canvas.create_text(
+            x_start + width + 5, y_start,
+            text="Low", anchor="nw", fill="#aaaaaa",
+            font=("Consolas", 8), tags="network"
+        )
+        self._viz_canvas.create_text(
+            x_start + width + 5, y_start + height,
+            text="High", anchor="sw", fill="#aaaaaa",
+            font=("Consolas", 8), tags="network"
+        )
+        self._viz_canvas.create_text(
+            x_start + width // 2, y_start - 12,
+            text="Tension", anchor="s", fill="#cccccc",
+            font=("Consolas", 9, "bold"), tags="network"
+        )
+
+    def _draw_degradation_legend(self, x_start: int, y_start: int):
+        """Draw degradation width legend showing fiber integrity (S) encoding."""
+        if self._viz_canvas is None:
+            return
+
+        # Title
+        self._viz_canvas.create_text(
+            x_start + 20, y_start,
+            text="Integrity", anchor="s", fill="#cccccc",
+            font=("Consolas", 9, "bold"), tags="network"
+        )
+
+        # Show 4 example widths: S=1.0, S=0.7, S=0.4, S=0.1
+        examples = [
+            (1.0, "S=1.0 (intact)"),
+            (0.7, "S=0.7"),
+            (0.4, "S=0.4"),
+            (0.1, "S=0.1"),
+            (0.0, "S=0.0 (ruptured)"),
+        ]
+        y_offset = y_start + 8
+        for s_val, label in examples:
+            w = max(1, int(4 * s_val))
+            if s_val == 0.0:
+                color = "#FF4444"
+                dash = (4, 4)
+            elif s_val < 1.0:
+                color = "#88aacc"
+                dash = (int(8 * s_val) + 2, 2)
+            else:
+                color = "#88aacc"
+                dash = None
+
+            line_kwargs = dict(fill=color, width=w, tags="network")
+            if dash:
+                line_kwargs["dash"] = dash
+            self._viz_canvas.create_line(
+                x_start, y_offset, x_start + 30, y_offset, **line_kwargs
+            )
+            self._viz_canvas.create_text(
+                x_start + 35, y_offset,
+                text=label, anchor="w", fill="#999999",
+                font=("Consolas", 7), tags="network"
+            )
+            y_offset += 16
+
     def _render_core_v2_network(self):
         """Render network from Core V2 render data."""
         if self._viz_canvas is None:
-            print("[Core V2 Render] ERROR: Canvas is None")
             return
 
         adapter = self.controller.state.loaded_network
         if not isinstance(adapter, CoreV2GUIAdapter):
-            print("[Core V2 Render] ERROR: Adapter is not CoreV2GUIAdapter")
             return
 
-        # Get render data (Catch B: only when actually rendering)
         render_data = adapter.get_render_data()
-        nodes = render_data['nodes']  # {node_id: (x, y)} in abstract units
-        edges = render_data['edges']  # [(edge_id, n_from, n_to, is_ruptured), ...]
-        strains = render_data.get('strains', {})  # {fiber_id: strain} for coloring
-        critical_fiber_id = render_data.get('critical_fiber_id', None)  # Fiber that triggered clearance
-        plasmin_locations = render_data.get('plasmin_locations', {})  # {fiber_id: position (0-1)}
+        nodes = render_data['nodes']
+        edges = render_data['edges']
+        strains = render_data.get('strains', {})
+        forces = render_data.get('forces', {})
+        integrity = render_data.get('integrity', {})
+        critical_fiber_id = render_data.get('critical_fiber_id', None)
+        plasmin_locations = render_data.get('plasmin_locations', {})
+        mean_integrity = render_data.get('mean_integrity', 1.0)
+        n_partially_degraded = render_data.get('n_partially_degraded', 0)
+        n_cleavage_events = render_data.get('n_cleavage_events', 0)
 
-        print(f"[Core V2 Render] Render data: {len(nodes)} nodes, {len(edges)} edges, {len(plasmin_locations)} plasmin-active fibers")
+        force_values = [abs(float(f)) for f in forces.values() if f is not None]
+        max_force = max(force_values) if force_values else 0.0
 
-        # Clear canvas
         self._viz_canvas.delete("network")
 
-        # Get canvas dimensions for scaling
         canvas_width = self._viz_canvas.winfo_width()
         canvas_height = self._viz_canvas.winfo_height()
 
-        print(f"[Core V2 Render] Canvas dimensions: {canvas_width}x{canvas_height}")
-
         if canvas_width <= 1 or canvas_height <= 1:
-            print("[Core V2 Render] WARNING: Canvas too small, skipping render")
             return
 
         # Compute bounding box
@@ -7138,55 +7596,56 @@ class ResearchSimulationPage(TkinterView):
             # Check if this is the critical fiber (triggered clearance)
             is_critical = (critical_fiber_id is not None and edge_id == critical_fiber_id)
 
-            # Color by strain gradient (or special colors for ruptured/critical)
+            # Color by tension gradient + width by integrity (degradation)
+            dash_pattern = None
+            fiber_S = integrity.get(edge_id, 1.0)  # Fiber integrity [0, 1]
             if is_critical:
                 color = "#FF00FF"  # Magenta (critical fiber) - highest priority
-                width = 5  # Extra thick
+                width = 6  # Extra thick
+                dash_pattern = None  # Solid for emphasis
             elif is_ruptured:
-                color = "#FF4444"  # Red (ruptured)
+                color = "#FF4444"  # Red (ruptured) - dashed to show cleavage
                 width = 1
+                dash_pattern = (4, 4)
             else:
-                # Get strain for this fiber and compute color
-                strain = strains.get(edge_id, 0.0)
-                color = self._compute_strain_color(strain)
-                # Highlight plasmin-active fibers with thicker width
-                width = 3 if has_plasmin else 2
+                # Prefer tension-based coloring if force data available
+                force = forces.get(edge_id)
+                if force is not None and max_force > 0:
+                    color = self._compute_tension_color(abs(float(force)), max_force)
+                else:
+                    # Fall back to strain-based coloring
+                    strain = strains.get(edge_id, 0.0)
+                    color = self._compute_strain_color(strain)
+                # Width encodes fiber integrity: thicker = intact, thinner = degraded
+                # S=1.0 → width 4, S=0.5 → width 2, S=0.1 → width 1
+                base_width = max(1, int(4 * fiber_S))
+                # Plasmin-active fibers get +1 width
+                width = base_width + (1 if has_plasmin else 0)
+                # Partially degraded fibers get a subtle dash pattern
+                if fiber_S < 1.0:
+                    dash_pattern = (int(8 * fiber_S) + 2, 2)
 
-            self._viz_canvas.create_line(
-                x1, y1, x2, y2,
-                fill=color,
-                width=width,
-                tags="network"
-            )
+            line_kwargs = dict(fill=color, width=width, tags="network")
+            if dash_pattern:
+                line_kwargs["dash"] = dash_pattern
+            self._viz_canvas.create_line(x1, y1, x2, y2, **line_kwargs)
 
         # Draw plasmin dots (green dots showing enzyme locations)
-        for fiber_id, position in plasmin_locations.items():
-            # Find the edge corresponding to this fiber
-            edge_info = None
-            for edge_id, n_from, n_to, is_ruptured in edges:
-                if edge_id == fiber_id:
-                    edge_info = (n_from, n_to)
-                    break
-
-            if edge_info and edge_info[0] in nodes and edge_info[1] in nodes:
-                n_from, n_to = edge_info
-                x1, y1 = to_canvas(*nodes[n_from])
-                x2, y2 = to_canvas(*nodes[n_to])
-
-                # Interpolate position along edge (0.0 = n_from, 1.0 = n_to)
-                px = x1 + position * (x2 - x1)
-                py = y1 + position * (y2 - y1)
-
-                # Draw green dot (plasmin molecule)
-                dot_radius = 5
-                self._viz_canvas.create_oval(
-                    px - dot_radius, py - dot_radius,
-                    px + dot_radius, py + dot_radius,
-                    fill="#00FF00",  # Bright green
-                    outline="#00AA00",  # Dark green outline
-                    width=1,
-                    tags="network"
-                )
+        if plasmin_locations:
+            # Build O(1) edge lookup to avoid O(P*E) nested loop
+            edge_endpoints = {eid: (nf, nt) for eid, nf, nt, _ in edges}
+            for fiber_id, position in plasmin_locations.items():
+                edge_info = edge_endpoints.get(fiber_id)
+                if edge_info and edge_info[0] in nodes and edge_info[1] in nodes:
+                    n_from, n_to = edge_info
+                    x1, y1 = to_canvas(*nodes[n_from])
+                    x2, y2 = to_canvas(*nodes[n_to])
+                    px = x1 + position * (x2 - x1)
+                    py = y1 + position * (y2 - y1)
+                    self._viz_canvas.create_oval(
+                        px - 5, py - 5, px + 5, py + 5,
+                        fill="#00FF00", outline="#00AA00", width=1, tags="network"
+                    )
 
         # Draw nodes
         for node_id, (x, y) in nodes.items():
@@ -7198,7 +7657,56 @@ class ResearchSimulationPage(TkinterView):
                 tags="network"
             )
 
-        print(f"[Core V2 Render] SUCCESS: Rendered {len(edges)} edges and {len(nodes)} nodes")
+        # Draw legends only when simulation is not running (they are static and expensive)
+        is_running = self.controller.state.is_running and not self.controller.state.is_paused
+        if not is_running:
+            if max_force > 0:
+                self._draw_color_legend(canvas_width - 60, 50)
+            self._draw_degradation_legend(canvas_width - 140, 240)
+
+        # Fiber count overlay (bottom-left)
+        n_ruptured = sum(1 for _, _, _, rupt in edges if rupt)
+        n_total = len(edges)
+        n_active = n_total - n_ruptured
+        overlay_text = f"Active: {n_active}  |  Degrading: {n_partially_degraded}  |  Cleaved: {n_ruptured}  |  Total: {n_total}"
+        self._viz_canvas.create_text(
+            padding, canvas_height - 12,
+            text=overlay_text, anchor="w", fill="#cccccc",
+            font=("Consolas", 10), tags="network"
+        )
+
+        # Degradation stats overlay (bottom-left, second line)
+        deg_text = f"Mean Integrity: {mean_integrity:.1%}  |  Cleavage Events: {n_cleavage_events}  |  λ₀={adapter.lambda_0:.1f}"
+        self._viz_canvas.create_text(
+            padding, canvas_height - 28,
+            text=deg_text, anchor="w", fill="#aabb99",
+            font=("Consolas", 9), tags="network"
+        )
+
+        # Time and lysis overlay (top-left)
+        t = adapter.get_current_time() if adapter.simulation else 0.0
+        lysis = adapter.get_lysis_fraction() if adapter.simulation else 0.0
+        time_text = f"t = {t:.2f}s  |  Lysis: {lysis:.1%}"
+        self._viz_canvas.create_text(
+            padding, 15,
+            text=time_text, anchor="w", fill="#aaaaaa",
+            font=("Consolas", 10), tags="network"
+        )
+
+        # Percolation annotation if network cleared
+        if critical_fiber_id is not None and adapter.simulation and adapter.simulation.state.clearance_event:
+            event = adapter.simulation.state.clearance_event
+            percolation_text = (
+                f"PERCOLATION LOST at t={event['time']:.2f}s\n"
+                f"Critical fiber: #{event['critical_fiber_id']}\n"
+                f"Lysis at clearance: {event['lysis_fraction']:.1%}\n"
+                f"Fibers cleaved: {event['cleaved_fibers']}/{event['total_fibers']}"
+            )
+            self._viz_canvas.create_text(
+                canvas_width // 2, 20,
+                text=percolation_text, anchor="n", fill="#ff88ff",
+                font=("Consolas", 10, "bold"), tags="network", justify="center"
+            )
 
     def _render_relaxed_core_v2_network(self):
         """Render mechanically relaxed network after percolation loss (Core V2)."""
@@ -7413,6 +7921,21 @@ class ResearchSimulationPage(TkinterView):
             text='Crosslink node (free)'
         )
 
+        # Percolation summary (bottom right)
+        if adapter.simulation and adapter.simulation.state.clearance_event:
+            event = adapter.simulation.state.clearance_event
+            summary = (
+                f"Percolation lost at t={event['time']:.2f}s\n"
+                f"Critical fiber: #{event.get('critical_fiber_id', '?')}\n"
+                f"Cleaved: {event.get('cleaved_fibers', '?')}/{event.get('total_fibers', '?')}\n"
+                f"Components: {len(components)}"
+            )
+            self._viz_canvas.create_text(
+                canvas_width - padding, canvas_height - padding,
+                anchor="se", fill="#ff88ff",
+                font=("Consolas", 10, "bold"), text=summary, justify="right"
+            )
+
         print(f"[Relaxed Render] SUCCESS: Rendered relaxed network with {len(components)} components")
 
     def _update_core_v2_metrics(self):
@@ -7425,16 +7948,33 @@ class ResearchSimulationPage(TkinterView):
         lysis = adapter.get_lysis_fraction()
 
         self.metric_time_min.set(self._format_minutes(t))
-        self.metric_lysis_pct.set(f"{lysis*100:.1f}%")
+        self.metric_time_sec.set(f"{t:.2f}")
+        self.metric_lysis_pct.set(f"{lysis*100:.2f}")
 
+        n_ruptured = 0
+        n_total = 0
+        batch_num = len(adapter.experiment_log) if hasattr(adapter, 'experiment_log') else 0
         if adapter.simulation:
             n_ruptured = adapter.simulation.state.n_ruptured
             n_total = len(adapter.simulation.state.fibers)
             self.metric_active_fibers.set(str(n_total - n_ruptured))
             self.metric_cleaved_fibers.set(str(n_ruptured))
+            self.metric_total_fibers.set(str(n_total))
+            self.metric_batch_number.set(str(batch_num))
 
-        self.metric_running.set(self._format_running_state())
-        self.metric_paused.set(self._format_paused_state())
+        # Update status banner
+        if self.controller.state.is_running and not self.controller.state.is_paused:
+            self.metric_status.set("Running")
+            if hasattr(self, '_status_banner') and self._status_banner:
+                self._status_banner.configure(bg="#1a3a1a", fg="#66cc66")
+        elif self.controller.state.is_paused:
+            self.metric_status.set("Paused")
+            if hasattr(self, '_status_banner') and self._status_banner:
+                self._status_banner.configure(bg="#3a3a1a", fg="#cccc66")
+        elif not self.controller.state.is_running:
+            self.metric_status.set("Complete" if adapter.termination_reason else "Stopped")
+            if hasattr(self, '_status_banner') and self._status_banner:
+                self._status_banner.configure(bg="#3a1a1a", fg="#cc6666")
 
         # Update tension metrics with force spike warning
         mean_tension = adapter.prev_mean_tension if adapter.prev_mean_tension is not None else 0.0
@@ -7449,6 +7989,22 @@ class ResearchSimulationPage(TkinterView):
         elif self.metric_max_tension_label:
             self.metric_max_tension_label.config(fg=self.FG_COLOR, font=self.SUBHEADING_2_FONT)
 
+        # Compute degradation metrics
+        mean_integrity = 1.0
+        n_cleavage_events = 0
+        if adapter.simulation:
+            s_values = [f.S for f in adapter.simulation.state.fibers]
+            mean_integrity = sum(s_values) / len(s_values) if s_values else 1.0
+            n_cleavage_events = len(adapter.simulation.state.degradation_history)
+
+        # Record plot data (lysis, tension, degradation)
+        try:
+            lysis_pct = lysis * 100.0
+            self._record_plot_data(batch_num, lysis_pct, mean_tension, max_tension,
+                                   mean_integrity, n_cleavage_events)
+        except Exception:
+            pass
+
     def _on_pause(self):
         """Core V2: Pause simulation."""
         Logger.log("ResearchSimulationPage: pause (Core V2)")
@@ -7456,7 +8012,6 @@ class ResearchSimulationPage(TkinterView):
             return
 
         self.controller.state.is_paused = True
-        print("[Core V2] Paused")
         self._update_core_v2_metrics()
 
     def _on_resume(self):
@@ -7466,7 +8021,6 @@ class ResearchSimulationPage(TkinterView):
             return
 
         self.controller.state.is_paused = False
-        print("[Core V2] Resumed")
         self._run_core_v2_step()
 
     def _on_stop(self):
@@ -7483,6 +8037,31 @@ class ResearchSimulationPage(TkinterView):
         One click = exactly one batch. No looping, timers, or scheduling.
         Preconditions and failures are shown as user-visible message boxes.
         """
+        adapter = self.controller.state.loaded_network
+
+        # Core V2 path: advance directly through the adapter
+        if isinstance(adapter, CoreV2GUIAdapter):
+            if not self.controller.state.is_running:
+                messagebox.showerror("Advance One Batch Failed", "Simulation is not running. Press Start first.")
+                return
+            if self.controller.state.is_paused:
+                messagebox.showerror("Advance One Batch Failed", "Simulation is paused. Resume first.")
+                return
+            try:
+                continue_sim = adapter.advance_one_batch()
+                if not continue_sim:
+                    self.controller.state.is_running = False
+                    messagebox.showinfo("Simulation Complete",
+                        f"Reason: {adapter.termination_reason}\n"
+                        f"Time: {adapter.get_current_time():.2f}s\n"
+                        f"Clearance: {adapter.get_lysis_fraction():.1%}")
+                self._render_core_v2_network()
+                self._update_core_v2_metrics()
+            except Exception as e:
+                messagebox.showerror("Advance One Batch Failed", str(e))
+            return
+
+        # Legacy path
         try:
             self.controller.advance_one_batch()
         except Exception as e:
@@ -7490,7 +8069,7 @@ class ResearchSimulationPage(TkinterView):
             return
         self._render_from_state()
 
-        # Phase 3.8: non-blocking warning dialog for hard performance threshold (diagnostic only).
+        # Non-blocking warning dialog for hard performance threshold (diagnostic only).
         hard_warn_sec = 2.0
         dur = getattr(self.controller, "last_batch_duration_sec", None)
         if dur is not None and float(dur) > hard_warn_sec:
@@ -7527,8 +8106,8 @@ class ResearchSimulationPage(TkinterView):
 
     def _on_run_n_batches(self):
         """
-        Explicit user action: run a bounded number of batches (Phase 4.0).
-        No timers/threads; this is a synchronous sequence of advance_one_batch() calls.
+        Explicit user action: run a bounded number of batches.
+        Supports both Core V2 and adapters.
         """
         n_max = 100
         try:
@@ -7540,6 +8119,42 @@ class ResearchSimulationPage(TkinterView):
             messagebox.showerror("Run N Batches Failed", f"Batches to Run must be between 1 and {n_max}.")
             return
 
+        adapter = self.controller.state.loaded_network
+
+        # Core V2 path
+        if isinstance(adapter, CoreV2GUIAdapter):
+            if not self.controller.state.is_running:
+                messagebox.showerror("Run N Batches Failed", "Simulation is not running. Press Start first.")
+                return
+            if self.controller.state.is_paused:
+                messagebox.showerror("Run N Batches Failed", "Simulation is paused. Resume first.")
+                return
+
+            completed = 0
+            terminated = False
+            try:
+                for i in range(n):
+                    continue_sim = adapter.advance_one_batch()
+                    if not continue_sim:
+                        self.controller.state.is_running = False
+                        terminated = True
+                        break
+                    completed += 1
+            except Exception as e:
+                messagebox.showerror("Run N Batches Failed", f"Batch {completed + 1} failed: {e}")
+
+            self._render_core_v2_network()
+            self._update_core_v2_metrics()
+
+            lysis = adapter.get_lysis_fraction()
+            t = adapter.get_current_time()
+            msg = f"Batches completed: {completed}\nTime: {t:.2f}s\nLysis: {lysis:.1%}"
+            if terminated:
+                msg += f"\n\nSimulation terminated: {adapter.termination_reason}"
+            messagebox.showinfo("Run Complete", msg)
+            return
+
+        # Legacy path
         try:
             completed = self.controller.run_n_batches(n)
         except Exception as e:
@@ -7548,8 +8163,6 @@ class ResearchSimulationPage(TkinterView):
             return
 
         self._render_from_state()
-        # Completion dialog (deterministic values from current state/log).
-        adapter = self.controller.state.loaded_network
         lysis_fraction = None
         if isinstance(adapter, Phase1NetworkAdapter) and getattr(adapter, "experiment_log", None):
             lysis_fraction = adapter.experiment_log[-1].get("lysis_fraction")
@@ -7803,7 +8416,7 @@ class ResearchSimulationPage(TkinterView):
 
     def _on_export_experiment_log(self):
         """
-        Explicit user action: export Phase 3.1 experiment log to CSV or JSON.
+        Explicit user action: export experiment log to CSV or JSON.
         No simulation side effects.
         """
         adapter = self.controller.state.loaded_network
@@ -7940,6 +8553,43 @@ class ResearchSimulationPage(TkinterView):
         except Exception as e:
             messagebox.showerror("Export Failed", str(e))
             return
+
+    def _on_export_diagnostics(self):
+        """
+        Export full simulation diagnostics as JSON.
+        Includes tension/strain distributions, rupture analysis, and relaxation summary.
+        """
+        adapter = self.controller.state.loaded_network
+
+        try:
+            from src.core.fibrinet_core_v2_adapter import CoreV2GUIAdapter
+        except Exception:
+            messagebox.showerror("Export Failed", "Core V2 not available")
+            return
+
+        if not isinstance(adapter, CoreV2GUIAdapter):
+            messagebox.showerror("Export Failed", "This export is only available for Core V2 simulations")
+            return
+
+        if adapter.simulation is None:
+            messagebox.showerror("Export Failed", "No simulation run yet. Start simulation first.")
+            return
+
+        path = filedialog.asksaveasfilename(
+            title="Export Diagnostics",
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json")],
+        )
+        if not path:
+            return
+
+        try:
+            result = compute_full_diagnostics(adapter.simulation)
+            with open(path, "w") as f:
+                f.write(result.to_json(indent=2))
+            messagebox.showinfo("Export Complete", f"Diagnostics saved to:\n{path}")
+        except Exception as e:
+            messagebox.showerror("Export Failed", str(e))
 
     def _on_replay_batch_check(self):
         """
@@ -8135,9 +8785,7 @@ class ResearchSimulationPage(TkinterView):
 
     # Strain is fixed: no interactive strain callback.
 
-    # ---------------------------
     # Visualization (deterministic)
-    # ---------------------------
     def _on_viz_mode_change(self):
         """Handle visualization mode toggle change."""
         Logger.log(f"Visualization mode changed to: {self._viz_mode.get()}")
@@ -8317,7 +8965,7 @@ class ResearchSimulationPage(TkinterView):
                 ax, ay = to_canvas(a)
                 bx, by = to_canvas(b)
 
-                # Phase 3C: Edge stiffness visualization
+                # Edge stiffness visualization
                 # Color and width proportional to weakest-link stiffness S
                 S_eff = float(e.S)
                 if S_eff >= 0.9:
@@ -8339,7 +8987,7 @@ class ResearchSimulationPage(TkinterView):
                     edge_width = max(1, int(2 * S_eff))  # Legacy: weaker edges thinner
                 self._viz_canvas.create_line(ax, ay, bx, by, fill=edge_color, width=edge_width)
 
-            # Phase 4: Plasmin site visualization (feature-flagged)
+            # Plasmin site visualization (feature-flagged)
             # Render spatial plasmin binding sites as small red circles at interpolated positions
             try:
                 if FeatureFlags.USE_SPATIAL_PLASMIN:
@@ -8400,7 +9048,7 @@ class ResearchSimulationPage(TkinterView):
                 # Silent fallback: if feature flag or rendering fails, continue without plasmin visualization
                 pass
 
-            # Phase 3A & 3B: Segment-level damage and binding visualization (v5.0 spatial mode)
+            # Segment-level damage and binding visualization (spatial mode)
             # Render segments as small circles colored by integrity (n_i/N_pf) and occupancy (B_i/S_i)
             try:
                 if FeatureFlags.USE_SPATIAL_PLASMIN:
@@ -8438,7 +9086,7 @@ class ResearchSimulationPage(TkinterView):
                                     # Convert to canvas coordinates
                                     sx, sy = to_canvas((x_seg, y_seg))
 
-                                    # Phase 3A: Color by damage (integrity = n_i / N_pf)
+                                    # Color by damage (integrity = n_i / N_pf)
                                     integrity = float(seg.n_i) / float(N_pf)
                                     if integrity >= 0.9:
                                         damage_color = "green"       # Intact
@@ -8449,7 +9097,7 @@ class ResearchSimulationPage(TkinterView):
                                     else:
                                         damage_color = "red"         # Near failure
 
-                                    # Phase 3B: Binding occupancy overlay (optional: render as outline)
+                                    # Binding occupancy overlay (optional: render as outline)
                                     occupancy = float(seg.B_i) / max(1.0, float(seg.S_i))
                                     if occupancy < 0.01:
                                         binding_outline = "blue"      # No binding
@@ -8477,7 +9125,7 @@ class ResearchSimulationPage(TkinterView):
                 # Silent fallback: if feature flag or rendering fails, continue without segment visualization
                 pass
 
-            # Phase 3D: Fractured edge visualization (dashed gray lines)
+            # Fractured edge visualization (dashed gray lines)
             # Render removed edges from fractured_history
             try:
                 if FeatureFlags.USE_SPATIAL_PLASMIN and adapter.fractured_history:
@@ -8741,9 +9389,7 @@ class ResearchSimulationPage(TkinterView):
                     outline="gray70",
                 )
 
-    # ---------------------------
     # State -> UI rendering
-    # ---------------------------
     def _render_from_state(self):
         """
         Single, explicit render point from SimulationState to UI.
@@ -8759,32 +9405,74 @@ class ResearchSimulationPage(TkinterView):
             if is_frozen:
                 # Keep display aligned deterministically when frozen/resumed/forked.
                 self.applied_strain_fixed.set(str(float(state.strain_value)))
+        if hasattr(self, '_strain_mode_menu') and self._strain_mode_menu is not None:
+            self._strain_mode_menu.configure(state=("disabled" if is_frozen else "normal"))
 
         # Metrics from state only
         self.metric_time_min.set(self._format_minutes(state.time))
-        self.metric_running.set(self._format_running_state())
-        self.metric_paused.set(self._format_paused_state())
+
+        # Update status banner
+        if state.is_running and not state.is_paused:
+            self.metric_status.set("Running")
+            if hasattr(self, '_status_banner') and self._status_banner:
+                self._status_banner.configure(bg="#1a3a1a", fg="#66cc66")
+        elif state.is_paused:
+            self.metric_status.set("Paused")
+            if hasattr(self, '_status_banner') and self._status_banner:
+                self._status_banner.configure(bg="#3a3a1a", fg="#cccc66")
+        elif state.is_running is False and state.time > 0:
+            self.metric_status.set("Stopped")
+            if hasattr(self, '_status_banner') and self._status_banner:
+                self._status_banner.configure(bg="#3a1a1a", fg="#cc6666")
+        else:
+            self.metric_status.set("Idle")
+            if hasattr(self, '_status_banner') and self._status_banner:
+                self._status_banner.configure(bg="#1a1a2a", fg="#6666cc")
 
         # Metrics are displayed from the last batch delta only (no recomputation here).
         metrics = self.controller.last_metrics
         if isinstance(metrics, dict):
             # Formatting only; values originate from the step.
-            self.metric_mean_tension.set(str(metrics.get("mean_tension", "--")))
-            self.metric_active_fibers.set(str(metrics.get("active_fibers", "--")))
-            self.metric_cleaved_fibers.set(str(metrics.get("cleaved_fibers", metrics.get("ruptured_fibers", "--"))))
+            mean_t = metrics.get("mean_tension", "--")
+            max_t = metrics.get("max_tension", "--")
+            active = metrics.get("active_fibers", "--")
+            cleaved = metrics.get("cleaved_fibers", metrics.get("ruptured_fibers", "--"))
+            total = metrics.get("total_fibers", "--")
+            batch_num = metrics.get("batch_number", "--")
+            time_sec = metrics.get("time", state.time)
+
+            self.metric_mean_tension.set(str(mean_t))
+            self.metric_max_tension.set(str(max_t) if max_t != "--" else "--")
+            self.metric_active_fibers.set(str(active))
+            self.metric_cleaved_fibers.set(str(cleaved))
+            self.metric_total_fibers.set(str(total))
+            self.metric_batch_number.set(str(batch_num))
+            self.metric_time_sec.set(f"{float(time_sec):.2f}" if time_sec != "--" else "--")
+
             lysis_fraction = metrics.get("lysis_fraction", None)
             if lysis_fraction is None:
                 self.metric_lysis_pct.set("--")
             else:
-                # Display as percent for the UI label; deterministic unit conversion only.
-                self.metric_lysis_pct.set(f"{float(lysis_fraction) * 100.0:.4f}")
+                lysis_pct = float(lysis_fraction) * 100.0
+                self.metric_lysis_pct.set(f"{lysis_pct:.4f}")
+
+            # Record plot data (only when we have numeric values)
+            try:
+                b = int(batch_num) if batch_num != "--" else None
+                l = float(lysis_fraction) * 100.0 if lysis_fraction is not None else None
+                mt = float(mean_t) if mean_t != "--" else None
+                mxt = float(max_t) if max_t != "--" else None
+                if b is not None and l is not None and mt is not None:
+                    self._record_plot_data(b, l, mt, mxt if mxt is not None else 0.0)
+            except (ValueError, TypeError):
+                pass
         else:
             self.metric_mean_tension.set("--")
             self.metric_active_fibers.set("--")
             self.metric_cleaved_fibers.set("--")
             self.metric_lysis_pct.set("--")
 
-        # Phase 1C static mechanics observables:
+        # static mechanics observables:
         # mean_tension and active_fibers are computed from the adapter's cached forces (read-only).
         adapter = state.loaded_network
         if isinstance(adapter, Phase1NetworkAdapter):

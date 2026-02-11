@@ -25,9 +25,6 @@ After enzymatic cleavage disconnects the fibrin network, the remaining
 fragments relax to new equilibrium configurations without external strain.
 This provides insight into the final structural topology of the cleared clot.
 
-Author: FibriNet Research Team
-Date: 2026-01-06
-Publication: Biophysics Journal (Submission)
 """
 
 from collections import deque
