@@ -4,9 +4,7 @@ Mechanochemical fibrin network degradation simulator. Couples worm-like chain po
 
 ## What This Does
 
-FibriNet simulates fibrinolysis — the enzymatic breakdown of fibrin blood clot networks by plasmin. It models each fiber as a WLC polymer, computes mechanical equilibrium via L-BFGS-B energy minimization, and degrades fibers stochastically using Gillespie SSA or discrete plasmin agents. The output: clearance times, lysis dynamics, and force distributions under varying strain conditions.
-
-Built for Kamal Mandava's thesis research at the University of Central Oklahoma, advised by Dr. Brittany Bannish. Supported by NIH R15 (Hudson PI, ECU).
+FibriNet simulates fibrinolysis — the enzymatic breakdown of fibrin blood clot networks by plasmin. It models each fiber as a WLC polymer, computes mechanical equilibrium via L-BFGS-B energy minimization, and degrades fibers stochastically using **Gillespie SSA** or **discrete plasmin agents**. The output: clearance times, lysis dynamics, and force distributions under varying strain conditions.
 
 ## Quick Start
 
@@ -76,7 +74,7 @@ to neighboring fibers. If any neighbor's strain exceeds the cascade threshold (0
 it ruptures mechanically. This propagates outward in waves until no more fibers
 exceed the threshold.
 
-### Three-Regime Constitutive Model (optional)
+### Three Regime Constitutive Model (optional)
 
 Disabled by default (THREE_REGIME_ENABLED = False). When enabled, a sigmoid blend
 smoothly transitions from WLC (entropic) to backbone (covalent) elasticity at high strain:
@@ -227,5 +225,5 @@ experimental levels. Diagnosed but not yet resolved.
 ## Author
 
 Kamal Mandava, University of Central Oklahoma
-Advisor: Dr. Brittany Bannish
+**Advisor: Dr. Brittany Bannish**
 Grant: NIH R15 (Hudson PI, ECU)
