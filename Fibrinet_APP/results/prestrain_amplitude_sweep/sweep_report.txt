@@ -1,0 +1,29 @@
+Prestrain Amplitude Sweep Report
+=======================================================
+
+Amplitudes tested: [0.0, 0.05, 0.1, 0.15, 0.2, 0.25]
+Seeds: [42, 43, 44]
+Prestrains: [0.0, 0.25, 0.43, 1.0, 2.33]
+Experimental area_cleared: [0.6, 0.71, 0.77, 0.9, 0.96]
+Production R^2 (amplitude=0.0): -0.7416
+
+Aggregated Results (mean +/- std across seeds)
+-------------------------------------------------------
+ Amplitude    R^2 mean    R^2 std   RMSE mean   2sig
+      0.00     -1.5299     0.6081      0.2046    0/3
+      0.05     -1.3255     0.7820      0.1948    0/3
+      0.10     -1.0906     0.3020      0.1868    0/3
+      0.15     -1.0824     0.5234      0.1855    0/3
+      0.20     -0.8849     0.1205      0.1777    0/3
+      0.25     -1.1438     0.8121      0.1860    0/3
+
+  * Best R^2: amplitude=0.20 (mean R^2=-0.8849)
+
+Flags
+-------------------------------------------------------
+  No amplitude improved R^2 beyond production (-0.7416).
+  No amplitude achieved positive R^2.
+
+Recommendation
+-------------------------------------------------------
+  Best R^2 is -0.8849 (still negative). Spatial prestrain alone does not resolve the Cone 2020 gap. Consider combining with other parameter adjustments.

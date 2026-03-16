@@ -1,0 +1,14 @@
+{
+  "label": "C",
+  "name": "High load (60%)",
+  "strain": 0.6,
+  "clearance_time": 34.036834486889894,
+  "final_time": 34.036834486889894,
+  "lysis_fraction": 0.436,
+  "n_ruptured": 219,
+  "n_total": 500,
+  "n_cleavages": 219,
+  "reason": "network_cleared",
+  "cleared": true,
+  "wall_s": 4.7039244174957275
+}

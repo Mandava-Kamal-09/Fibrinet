@@ -1,0 +1,81 @@
+{
+  "physics_engine": "FibriNet Core V2",
+  "version": "2.0",
+  "integrator": "L-BFGS-B (Analytical Jacobian)",
+  "complexity": "O(N_fibers + N_nodes) per timestep",
+  "vectorization": "NumPy (no Python loops)",
+  "force_model": "WLC (Marko-Siggia) + Exact Energy Integral",
+  "force_equation": "F(\u03b5) = (k_B T / \u03be) \u00d7 [1/(4(1-\u03b5)\u00b2) - 1/4 + \u03b5]",
+  "energy_equation": "U(\u03b5) = (k_B T L_c / \u03be) \u00d7 [1/(4(1-\u03b5)) - 1/4 - \u03b5/4 + \u03b5\u00b2/2]",
+  "energy_force_consistency": "Verified: |F - dU/dx|/F < 1e-6",
+  "rupture_model": "Strain-Inhibited Enzymatic Cleavage (CORRECTED)",
+  "rupture_equation": "k(F,S) = k\u2080 \u00d7 exp(-(F/max(S,S_floor)) \u00d7 x_b / k_B T)",
+  "rupture_rationale": "NEGATIVE exponent: higher stress \u2192 SLOWER cleavage (Li et al. 2017, Adhikari et al. 2012)",
+  "chemistry_algorithm": "Hybrid SSA + tau-leaping",
+  "chemistry_switching": "Auto-select based on total propensity",
+  "numerical_methods": {
+    "timestep_chemistry": 0.005,
+    "timestep_requested": 1.0,
+    "timestep_capped": true,
+    "solver": "L-BFGS-B",
+    "solver_tolerance": 1e-06,
+    "force_clamping": true,
+    "force_ceiling_N": 1e-06,
+    "adaptive_timestep": false,
+    "energy_minimization_method": "Analytical Jacobian (100x speedup vs finite differences)"
+  },
+  "guards": {
+    "S_MIN_BELL": 0.05,
+    "MAX_STRAIN": 0.99,
+    "MAX_BELL_EXPONENT": 100.0,
+    "rationale": "Clamps prevent numerical overflow while preserving physics in accessible regime"
+  },
+  "assumptions": [
+    "Quasi-static mechanical equilibrium (relaxation >> chemistry timescale)",
+    "Uniform enzyme distribution (mean-field, fast diffusion limit)",
+    "Affine boundary stretching (probes global constitutive response)",
+    "Cross-section scaling: F_eff = S \u00d7 F_wlc (independent fiber approximation)",
+    "Isothermal conditions (T = 310.15 K = 37\u00b0C physiological)",
+    "Initial prestrain: Fibers polymerize under 23% tensile strain (Cone et al. 2020)"
+  ],
+  "physical_constants": {
+    "k_B": 1.380649e-23,
+    "T": 310.15,
+    "k_B_T": 4.2820828735e-21,
+    "xi": 1e-06,
+    "x_bell": 5e-10,
+    "k_cat_0": 0.02,
+    "PRESTRAIN": 0.23
+  },
+  "parameters": {
+    "lambda_0": 1.0,
+    "dt": 1.0,
+    "max_time": 1800.0,
+    "applied_strain": 0.6,
+    "strain_mode": "boundary_only",
+    "coord_to_m": 1e-06,
+    "thickness_to_m": 1e-06,
+    "delta_S": 1.0
+  },
+  "network": {
+    "n_nodes": 220,
+    "n_fibers": 500,
+    "n_left_boundary": 28,
+    "n_right_boundary": 25
+  },
+  "rng_seed": 0,
+  "deterministic": true,
+  "clearance_event": {
+    "time": 34.036834486889894,
+    "critical_fiber_id": 383,
+    "lysis_fraction": 0.436,
+    "remaining_fibers": 281,
+    "total_fibers": 500,
+    "cleaved_fibers": 219
+  },
+  "validation": {
+    "energy_force_consistency": "PASS",
+    "stress_based_bell": "PASS",
+    "energy_minimization": "PASS"
+  }
+}

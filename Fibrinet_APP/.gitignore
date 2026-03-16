@@ -65,5 +65,11 @@ slurm-*.out
 *.log
 utils/logs.txt
 
+# Office documents (historical artifacts)
+*.docx
+
+# Tool-specific files
+.claude/
+
 # Windows artifacts
 nul

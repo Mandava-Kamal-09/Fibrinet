@@ -117,6 +117,7 @@ class CoreV2GUIAdapter:
         self.applied_strain: float = 0.1
         self.strain_mode: str = "boundary_only"  # "boundary_only" or "affine"
         self.max_time: float = 100.0  # [s]
+        self.force_model: str = 'wlc'  # 'wlc' or 'ewlc'
 
         # Legacy compatibility fields
         self.frozen_params: Optional[Dict] = None
@@ -125,6 +126,10 @@ class CoreV2GUIAdapter:
         self.experiment_log: List[Dict] = []
         self.termination_reason: Optional[str] = None
         self.rng: random.Random = random.Random(0)
+
+        # ABM mode settings
+        self.chemistry_mode: str = 'mean_field'  # 'mean_field' or 'abm'
+        self.abm_params = None  # ABMParameters instance when ABM active
 
         # Observables
         self._forces_by_edge_id: Dict[int, float] = {}
@@ -296,6 +301,11 @@ class CoreV2GUIAdapter:
             y_si = y_raw * self.coord_to_m
             node_positions_si_original[nid] = np.array([x_si, y_si])
 
+        # Compute x-extent from ORIGINAL positions (needed for spatial prestrain and strain application)
+        x_coords_orig = [pos[0] for pos in node_positions_si_original.values()]
+        x_min, x_max = min(x_coords_orig), max(x_coords_orig)
+        x_span = x_max - x_min
+
         # Calculate fiber rest lengths using ORIGINAL (unstretched) positions
         # This ensures prestrain is independent of applied_strain
         fiber_rest_lengths = {}
@@ -309,16 +319,33 @@ class CoreV2GUIAdapter:
             pos_to_orig = node_positions_si_original[n_to]
             length_orig = float(np.linalg.norm(pos_to_orig - pos_from_orig))
 
-            # Apply prestrain to get rest length
-            # Fibers polymerize under 23% strain (Cone et al. 2020)
-            L_c = length_orig / (1.0 + PC.PRESTRAIN)
+            # Spatial prestrain: higher near boundaries, lower in interior
+            # Kill-switch: PC.PRESTRAIN_AMPLITUDE = 0.0 → uniform PC.PRESTRAIN everywhere
+            x_from = node_positions_si_original[n_from][0]
+            x_to = node_positions_si_original[n_to][0]
+            x_fiber = 0.5 * (x_from + x_to)
+
+            x_frac = (x_fiber - x_min) / x_span if x_span > 0 else 0.5
+
+            boundary_proximity = abs(2.0 * x_frac - 1.0)
+
+            per_fiber_prestrain = PC.PRESTRAIN * (
+                1.0 + PC.PRESTRAIN_AMPLITUDE * boundary_proximity
+            )
+
+            per_fiber_prestrain = float(np.clip(per_fiber_prestrain, 0.01, 2.0))
+
+            L_c = length_orig / (1.0 + per_fiber_prestrain)
             fiber_rest_lengths[eid] = L_c
+
+        if PC.PRESTRAIN_AMPLITUDE > 0:
+            print(f"[SpatialPrestrain] amplitude={PC.PRESTRAIN_AMPLITUDE:.2f}, "
+                  f"n_fibers={len(fiber_rest_lengths)}, "
+                  f"L_c range=[{min(fiber_rest_lengths.values()):.3e}, "
+                  f"{max(fiber_rest_lengths.values()):.3e}] m")
 
         # NOW apply strain (for simulation boundary conditions)
         node_positions_si = {nid: pos.copy() for nid, pos in node_positions_si_original.items()}
-        x_coords = [pos[0] for pos in node_positions_si.values()]
-        x_min, x_max = min(x_coords), max(x_coords)
-        x_span = x_max - x_min
 
         if strain_mode == "affine":
             # Affine deformation: displace ALL nodes proportionally to x-position
@@ -335,10 +362,28 @@ class CoreV2GUIAdapter:
                 node_positions_si[nid][0] += applied_strain * x_span
             print(f"[Core V2] Applied boundary-only strain {applied_strain} to {len(self.right_boundary_node_ids)} right boundary nodes")
 
-        # Fixed boundary conditions (rigid grips)
+        # Validate boundary nodes don't overlap (CRITICAL: prevents constraint conflicts)
+        overlap = set(self.left_boundary_node_ids) & set(self.right_boundary_node_ids)
+        if overlap:
+            raise ValueError(
+                f"Boundary condition conflict: {len(overlap)} node(s) appear in BOTH "
+                f"left and right boundaries: {sorted(overlap)}. "
+                f"Each node must be either fully fixed (left) OR partially fixed (right), not both."
+            )
+
+        # Fixed boundary conditions (realistic uniaxial tension)
+        # Left grip: fully fixed (both X and Y) - rigid clamp
+        # Right grip: X fixed (maintains strain), Y free (allows lateral contraction)
         fixed_nodes = {}
-        for nid in self.left_boundary_node_ids + self.right_boundary_node_ids:
+        partial_fixed_x = {}  # Nodes with only X coordinate fixed
+
+        for nid in self.left_boundary_node_ids:
+            # Left boundary: fix both X and Y
             fixed_nodes[nid] = node_positions_si[nid].copy()
+
+        for nid in self.right_boundary_node_ids:
+            # Right boundary: fix X only, Y can move (Poisson contraction)
+            partial_fixed_x[nid] = node_positions_si[nid][0]  # Store X coordinate
 
         # Create WLC fibers using pre-calculated rest lengths
         fibers = []
@@ -351,16 +396,36 @@ class CoreV2GUIAdapter:
             # Get rest length (calculated from ORIGINAL positions)
             L_c_prestrained = fiber_rest_lengths[eid]
 
+            # Diameter heterogeneity (lognormal distribution)
+            d_ref = PC.FIBER_DIAMETER_REF_NM
+            mean_d = PC.FIBER_MEAN_DIAMETER_NM
+            cv = PC.FIBER_DIAMETER_CV
+            if cv == 0.0:
+                diameter_nm = mean_d
+            else:
+                sigma_log = np.sqrt(np.log(1 + cv**2))
+                mu_log = np.log(mean_d) - 0.5 * sigma_log**2
+                fiber_rng = np.random.default_rng(getattr(self, 'rng_seed', 0) + eid)
+                diameter_nm = float(fiber_rng.lognormal(mu_log, sigma_log))
+                diameter_nm = np.clip(diameter_nm, 50.0, 400.0)
+            d_ratio = diameter_nm / d_ref
+            fiber_xi = PC.xi * (d_ratio ** 2)
+            fiber_K0 = PC.EWLC_K0 * (d_ratio ** 2)
+            fiber_k_cat = PC.k_cat_0 * (1.0 / d_ratio)
+
             # Create WLC fiber (born under tension)
             fiber = WLCFiber(
                 fiber_id=eid,
                 node_i=n_from,
                 node_j=n_to,
                 L_c=L_c_prestrained,  # [m] - Rest length < geometric length (prestrained)
-                xi=PC.xi,
+                xi=fiber_xi,
                 S=1.0,  # Initially intact
                 x_bell=PC.x_bell,
-                k_cat_0=self.lambda_0  # Map plasmin concentration to baseline rate
+                k_cat_0=fiber_k_cat,  # Physical baseline rate [s⁻¹] (Lynch 2022)
+                force_model=self.force_model,  # 'wlc' or 'ewlc'
+                K0=fiber_K0,  # eWLC finite extensibility parameter
+                diameter_nm=diameter_nm,
             )
             fibers.append(fiber)
 
@@ -372,11 +437,14 @@ class CoreV2GUIAdapter:
             fibers=fibers,
             node_positions=node_positions_si,
             fixed_nodes=fixed_nodes,
+            partial_fixed_x=partial_fixed_x,
             left_boundary_nodes=set(self.left_boundary_node_ids),
             right_boundary_nodes=set(self.right_boundary_node_ids)
         )
 
-        print(f"[Core V2] Boundary nodes set: {len(self.left_boundary_node_ids)} left, {len(self.right_boundary_node_ids)} right")
+        print(f"[Core V2] Boundary conditions:")
+        print(f"  Left boundary: {len(self.left_boundary_node_ids)} nodes fully fixed (X and Y)")
+        print(f"  Right boundary: {len(self.right_boundary_node_ids)} nodes with X fixed, Y free (allows lateral contraction)")
 
         return state
 
@@ -386,7 +454,13 @@ class CoreV2GUIAdapter:
                             max_time: float,
                             applied_strain: float,
                             rng_seed: int = 0,
-                            strain_mode: str = "boundary_only"):
+                            strain_mode: str = "boundary_only",
+                            force_model: str = "wlc",
+                            chemistry_mode: str = "mean_field",
+                            abm_params: Optional[dict] = None,
+                            strain_cleavage_mode: str = "inhibitory",
+                            gamma_biphasic: float = 1.15,
+                            eps_star: float = 0.22):
         """
         Configure simulation parameters from GUI.
 
@@ -400,6 +474,12 @@ class CoreV2GUIAdapter:
             max_time: Maximum simulation time [s] - GUI-only
             applied_strain: Strain to apply - GUI-only
             strain_mode: "boundary_only" (right boundary only) or "affine" (all fibers)
+            force_model: "wlc" (standard) or "ewlc" (extended with finite extensibility)
+            chemistry_mode: "mean_field" (Gillespie SSA) or "abm" (discrete agents)
+            abm_params: Dict of ABM parameters (converted to ABMParameters)
+            strain_cleavage_mode: "inhibitory", "neutral", or "biphasic"
+            gamma_biphasic: γ recovery exponent for biphasic mode
+            eps_star: ε* crossover strain for biphasic mode
         """
         # Validate
         if plasmin_concentration <= 0:
@@ -417,6 +497,21 @@ class CoreV2GUIAdapter:
         self.applied_strain = float(applied_strain)
         self.rng_seed = int(rng_seed)
         self.strain_mode = strain_mode if strain_mode in ("boundary_only", "affine") else "boundary_only"
+        self.force_model = force_model if force_model in ("wlc", "ewlc") else "wlc"
+
+        # Mechanochemical coupling mode
+        valid_modes = ("inhibitory", "neutral", "biphasic")
+        self.strain_cleavage_mode = strain_cleavage_mode if strain_cleavage_mode in valid_modes else "inhibitory"
+        self.gamma_biphasic = float(gamma_biphasic)
+        self.eps_star = float(eps_star)
+
+        # ABM configuration
+        self.chemistry_mode = chemistry_mode if chemistry_mode in ("mean_field", "abm") else "mean_field"
+        if abm_params and self.chemistry_mode == 'abm':
+            from src.core.plasmin_abm import ABMParameters
+            self.abm_params = ABMParameters(**abm_params)
+        else:
+            self.abm_params = None
 
         print(f"Parameters configured:")
         print(f"  lambda_0 (plasmin) = {self.lambda_0}")
@@ -424,12 +519,21 @@ class CoreV2GUIAdapter:
         print(f"  t_max = {self.max_time} s")
         print(f"  strain = {self.applied_strain}")
         print(f"  strain_mode = {self.strain_mode}")
+        print(f"  force_model = {self.force_model}")
+        print(f"  chemistry_mode = {self.chemistry_mode}")
+        print(f"  strain_cleavage_mode = {self.strain_cleavage_mode}")
+        if self.strain_cleavage_mode == 'biphasic':
+            print(f"    gamma = {self.gamma_biphasic}, eps_star = {self.eps_star}")
+        if self.abm_params:
+            print(f"  ABM: n_agents={self.abm_params.n_agents}, "
+                  f"model={self.abm_params.strain_cleavage_model}")
 
     def start_simulation(self):
         """
         Initialize Core V2 simulation with configured parameters.
 
         Creates the NetworkState and HybridMechanochemicalSimulation.
+        Supports both mean-field (Gillespie SSA) and ABM (discrete agents) modes.
         """
         if self.excel_path is None:
             raise ValueError("No network loaded. Call load_from_excel() first.")
@@ -437,22 +541,35 @@ class CoreV2GUIAdapter:
         # Create Core V2 state
         self.network_state = self._create_core_v2_state(self.applied_strain, self.strain_mode)
 
-        # Initialize simulation with plasmin concentration scaling
+        # Initialize ABM ID counters (large offset to avoid collisions)
+        if self.chemistry_mode == 'abm':
+            max_fid = max(f.fiber_id for f in self.network_state.fibers) if self.network_state.fibers else 0
+            max_nid = max(self.network_state.node_positions.keys()) if self.network_state.node_positions else 0
+            self.network_state.abm_next_fiber_id = max_fid + 1000
+            self.network_state.abm_next_node_id = max_nid + 1000
+
+        # Initialize simulation
         self.simulation = HybridMechanochemicalSimulation(
             initial_state=self.network_state,
-            rng_seed=getattr(self, 'rng_seed', 0),  # Use configured seed or default to 0
-            dt_chem=min(self.dt, 0.005),  # Cap at 0.005s to prevent force singularities
+            rng_seed=getattr(self, 'rng_seed', 0),
+            dt_chem=self.dt,  # User-specified timestep (default 0.1s)
             t_max=self.max_time,
             lysis_threshold=0.9,
-            delta_S=0.1,  # Integrity decrement per cleavage
-            plasmin_concentration=getattr(self, 'lambda_0', 1.0)  # λ₀ from GUI
+            delta_S=0.1,
+            plasmin_concentration=getattr(self, 'lambda_0', 1.0),
+            chemistry_mode=self.chemistry_mode,
+            abm_params=self.abm_params,
+            strain_cleavage_mode=getattr(self, 'strain_cleavage_mode', 'inhibitory'),
+            gamma_biphasic=getattr(self, 'gamma_biphasic', 1.15),
+            eps_star=getattr(self, 'eps_star', 0.22),
         )
 
         # Reset experiment log
         self.experiment_log = []
         self.termination_reason = None
 
-        print(f"Simulation started: {len(self.network_state.fibers)} fibers")
+        mode_label = "ABM (discrete agents)" if self.chemistry_mode == 'abm' else "Mean-field (Gillespie)"
+        print(f"Simulation started: {len(self.network_state.fibers)} fibers, mode={mode_label}")
 
     def advance_one_batch(self) -> bool:
         """
@@ -1063,41 +1180,64 @@ class CoreV2GUIAdapter:
         # Node positions in abstract units
         nodes_abstract = self.get_node_positions()
 
-        # Edge states, strains, and integrity
+        # Batch-vectorized edge states, strains, and integrity
+        sim_fibers = self.simulation.state.fibers
+        node_pos = self.simulation.state.node_positions
+        n = len(sim_fibers)
+
         edges = []
         intact_edges = []
         ruptured_edges = []
-        strains = {}  # {fiber_id: strain} for visualization
-        integrity = {}  # {fiber_id: S} for degradation visualization
+        integrity = {}
+        diameters = {}
 
-        for fiber in self.simulation.state.fibers:
-            # Skip fibers with missing nodes (can happen during network evolution)
-            if fiber.node_i not in self.simulation.state.node_positions or \
-               fiber.node_j not in self.simulation.state.node_positions:
+        # Build arrays for vectorized strain computation
+        valid_indices = []
+        pos_i_list = []
+        pos_j_list = []
+        L_c_list = []
+        fid_list = []
+
+        for i, fiber in enumerate(sim_fibers):
+            if fiber.node_i not in node_pos or fiber.node_j not in node_pos:
                 continue
-
             is_ruptured = (fiber.S == 0.0)
             edges.append((fiber.fiber_id, fiber.node_i, fiber.node_j, is_ruptured))
-
-            # Store fiber integrity for degradation visualization
             integrity[fiber.fiber_id] = fiber.S
-
-            # Compute current fiber strain for visualization
-            pos_i = self.simulation.state.node_positions[fiber.node_i]
-            pos_j = self.simulation.state.node_positions[fiber.node_j]
-            current_length = float(np.linalg.norm(pos_j - pos_i))
-            strain = (current_length - fiber.L_c) / fiber.L_c
-            strains[fiber.fiber_id] = strain
-
+            diameters[fiber.fiber_id] = getattr(fiber, 'diameter_nm', 130.0)
             if is_ruptured:
                 ruptured_edges.append(fiber.fiber_id)
             else:
                 intact_edges.append(fiber.fiber_id)
+            valid_indices.append(i)
+            pos_i_list.append(node_pos[fiber.node_i])
+            pos_j_list.append(node_pos[fiber.node_j])
+            L_c_list.append(fiber.L_c)
+            fid_list.append(fiber.fiber_id)
 
-        # Compute mean integrity for degradation tracking
-        s_values = [fiber.S for fiber in self.simulation.state.fibers]
-        mean_integrity = sum(s_values) / len(s_values) if s_values else 1.0
-        n_partially_degraded = sum(1 for s in s_values if 0.0 < s < 1.0)
+        # Vectorized strain computation
+        if valid_indices:
+            pos_i_arr = np.array(pos_i_list)
+            pos_j_arr = np.array(pos_j_list)
+            L_c_arr = np.array(L_c_list)
+            lengths = np.linalg.norm(pos_j_arr - pos_i_arr, axis=1)
+            strain_arr = (lengths - L_c_arr) / L_c_arr
+            strains = dict(zip(fid_list, strain_arr.tolist()))
+        else:
+            strains = {}
+
+        # Vectorized mean integrity
+        S_arr = np.array([f.S for f in sim_fibers]) if sim_fibers else np.array([1.0])
+        mean_integrity = float(np.mean(S_arr))
+        n_partially_degraded = int(np.sum((S_arr > 0.0) & (S_arr < 1.0)))
+
+        # ABM agent data (None when mean-field mode)
+        abm_agent_locations = None
+        abm_statistics = None
+        if (self.chemistry_mode == 'abm' and self.simulation
+                and self.simulation.abm_engine):
+            abm_agent_locations = self.simulation.abm_engine.get_agent_locations()
+            abm_statistics = self.simulation.abm_engine.get_statistics()
 
         return {
             'nodes': nodes_abstract,
@@ -1106,12 +1246,15 @@ class CoreV2GUIAdapter:
             'ruptured_edges': ruptured_edges,
             'forces': self._forces_by_edge_id,
             'strains': strains,
-            'integrity': integrity,  # Fiber integrity S values for degradation visualization
+            'integrity': integrity,
             'mean_integrity': mean_integrity,
             'n_partially_degraded': n_partially_degraded,
             'n_cleavage_events': len(self.simulation.state.degradation_history),
             'critical_fiber_id': self.simulation.state.critical_fiber_id,
-            'plasmin_locations': dict(self.simulation.state.plasmin_locations)
+            'plasmin_locations': dict(self.simulation.state.plasmin_locations),
+            'abm_agent_locations': abm_agent_locations,
+            'abm_statistics': abm_statistics,
+            'diameters': diameters,
         }
 
 

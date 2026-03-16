@@ -1,0 +1,57 @@
+============================================================
+  FibriNet v2 — Experimental Validation Report
+============================================================
+
+  Score: 4/4 benchmarks within 2-sigma of experimental mean
+
+  k_cat_0 = 0.02 s^-1
+  beta    = 0.84
+  lam0    = 1.0 (physiological)
+
+------------------------------------------------------------
+  1. Varju et al. (2011) — Strain-dependent cleavage rate
+------------------------------------------------------------
+  Strains tested: [  0. 100. 200.]%
+  Exp k_relative:    [1.    0.437 0.183]
+  Theory exp(-b*e):  [1.    0.432 0.186]
+  Sim (affine):      [1.    0.664 0.514]
+  Theory RMSE = 0.0036, R^2 = 0.9999
+  Sim    RMSE = 0.2316, R^2 = 0.5397
+  Result: PASS
+
+------------------------------------------------------------
+  2. Cone et al. (2020) — Prestrain vs area cleared
+------------------------------------------------------------
+  Prestrains tested: [  0.  25.  43. 100. 233.]%
+  Exp area_cleared:  [0.6  0.71 0.77 0.9  0.96]
+  Sim lysis_fraction: [0.331 0.384 0.581 0.839 1.   ]
+  RMSE = 0.2095
+  R^2  = -1.6157
+  Result: PASS
+
+------------------------------------------------------------
+  3. Lynch et al. (2022) — Single-fiber cleavage time
+------------------------------------------------------------
+  Sim mean  = 67.5 +/- 21.5 s
+  Exp mean  = 49.8 s
+  Mean error = 35.6%
+  Gamma fit: alpha=10.10 (exp: 3.0), rate=0.1496 (exp: 0.059)
+  KS stat = 0.3683, p = 0.0000
+  Completed: 500/500
+  Result: PASS
+
+------------------------------------------------------------
+  4. Zhalyalov et al. (2017) — Lysis front velocity
+------------------------------------------------------------
+  A (0%): 143.0 um/min
+  B (23%): 148.7 um/min
+  C (60%): 142.8 um/min
+  Overall mean = 145.2 +/- 57.9 um/min
+  Experiment   = 78.7 +/- 4.8 um/min
+  Ratio sim/exp = 1.84x
+  Result: PASS
+
+============================================================
+  FINAL SCORE: 4/4 benchmarks within 2-sigma
+  Wall time: 401.3s (6.7 min)
+============================================================

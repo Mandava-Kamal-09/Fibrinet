@@ -5780,15 +5780,51 @@ class ResearchSimulationPage(TkinterView):
         self.PAGE_SUBHEADING_BG = view.SUBHEADING_BG
         self.SUBHEADING_2_FONT = view.SUBHEADING_2_FONT
 
+        # Section layout constants
+        self._SECTION_PAD_Y = 12
+        self._BTN_PAD_X = 10
+        self._BTN_PAD_Y = 7
+        self._EXPORT_BTN_BG = "#2d4a5a"
+        self._EXPORT_BTN_ACTIVE_BG = "#3d5a6a"
+        self._SEPARATOR_COLOR = "#333333"
+        # Section header font (bolder than SUBHEADING_2_FONT)
+        try:
+            import tkinter.font as tkfont
+            test_font = tkfont.Font(family="Segoe UI", size=11, weight="bold")
+            self._SECTION_HEADER_FONT = ("Segoe UI", 11, "bold")
+        except Exception:
+            self._SECTION_HEADER_FONT = ("Consolas", 11, "bold")
+
         # UI state (no defaults that encode scientific assumptions)
         self.selected_network_path = tk.StringVar(value="")
         # Plasmin concentration: GUI-only parameter (never read from Excel metadata)
-        self.plasmin_concentration = tk.StringVar(value="")
-        self.time_step = tk.StringVar(value="")
-        self.max_time = tk.StringVar(value="")
-        # Applied strain is a fixed experimental parameter (read once at Start).
-        self.applied_strain_fixed = tk.StringVar(value="0.0")
+        self.plasmin_concentration = tk.StringVar(value="1.0")
+        self.time_step = tk.StringVar(value="0.1")
+        self.max_time = tk.StringVar(value="1800")
+        self.applied_strain_fixed = tk.StringVar(value="0")
         self.strain_mode_var = tk.StringVar(value="Boundary Only")
+        self.force_model_var = tk.StringVar(value="WLC (Standard)")
+
+        # ABM parameters
+        self.chemistry_mode_var = tk.StringVar(value="Mean-Field (Gillespie)")
+        self.abm_n_agents = tk.StringVar(value="auto")
+        self.abm_k_on2 = tk.StringVar(value="1e5")
+        self.abm_alpha_on = tk.StringVar(value="5.0")
+        self.abm_k_off0 = tk.StringVar(value="0.001")
+        self.abm_delta_off = tk.StringVar(value="0.5")
+        self.abm_p_stay = tk.StringVar(value="0.5")
+        self.abm_k_cat0 = tk.StringVar(value="0.020")
+        self.abm_beta_cat = tk.StringVar(value="0.84")
+        self.abm_strain_dep_kon = tk.BooleanVar(value=True)
+        self.abm_strain_dep_koff = tk.BooleanVar(value=True)
+        self.abm_update_kcat_dynamic = tk.BooleanVar(value=True)
+        self.abm_strain_cleavage_model = tk.StringVar(value="Exponential")
+
+        # Mechanochemical coupling mode (mean-field chemistry)
+        self.strain_cleavage_mode_var = tk.StringVar(value="Inhibitory (Varju 2011)")
+        self.biphasic_gamma = tk.StringVar(value="1.15")
+        self.biphasic_eps_star = tk.StringVar(value="22")  # percent
+
         # Explicit multi-batch run control (validated; no automation)
         self.batches_to_run = tk.StringVar(value="1")
         # Parameter sweep controls (validated; no async)
@@ -5865,6 +5901,27 @@ class ResearchSimulationPage(TkinterView):
 
         # Canvas refs
         self._viz_canvas = None
+        # Fixed reference frame for simulation rendering (cached initial bounds)
+        self._sim_initial_bounds = None
+        # Initial node positions for ghost dot overlay
+        self._sim_initial_nodes = None
+        # Button refs for state updates
+        self._start_btn = None
+        self._pause_btn = None
+
+        # --- Performance: render throttling & canvas caching ---
+        self._render_frame_counter = 0
+        self._render_skip = 3  # Only render every Nth frame during simulation
+        self._canvas_cache = {}  # {item_key: canvas_item_id} for incremental updates
+        self._canvas_topology_hash = None  # Detect topology changes for full invalidation
+        # Plot line references for set_ydata() optimization
+        self._plot_lines_initialized = False
+        self._lysis_line = None
+        self._lysis_fill = None
+        self._tension_mean_line = None
+        self._tension_max_line = None
+        self._degradation_line = None
+        self._cleavage_line = None
         # Pre-load diagnostics (UI-only; no mutation of simulation state)
         self._boundary_preview: dict[str, Any] | None = None
 
@@ -5914,7 +5971,7 @@ class ResearchSimulationPage(TkinterView):
         main = tk.Frame(container, bg=self.BG_COLOR)
         main.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
 
-        main.grid_columnconfigure(0, weight=0, minsize=430)
+        main.grid_columnconfigure(0, weight=0, minsize=460)
         main.grid_columnconfigure(1, weight=1)
         main.grid_rowconfigure(0, weight=1)
 
@@ -5922,7 +5979,7 @@ class ResearchSimulationPage(TkinterView):
         left_outer = tk.Frame(main, bg=self.BG_COLOR)
         left_outer.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
 
-        left_canvas = tk.Canvas(left_outer, bg=self.BG_COLOR, highlightthickness=0, width=420)
+        left_canvas = tk.Canvas(left_outer, bg=self.BG_COLOR, highlightthickness=0, width=450)
         left_scrollbar = tk.Scrollbar(left_outer, orient="vertical", command=left_canvas.yview)
         left = tk.Frame(left_canvas, bg=self.BG_COLOR)
 
@@ -5930,7 +5987,7 @@ class ResearchSimulationPage(TkinterView):
             "<Configure>",
             lambda e: left_canvas.configure(scrollregion=left_canvas.bbox("all"))
         )
-        self._left_canvas_window = left_canvas.create_window((0, 0), window=left, anchor="nw", width=420)
+        self._left_canvas_window = left_canvas.create_window((0, 0), window=left, anchor="nw", width=450)
         left_canvas.configure(yscrollcommand=left_scrollbar.set)
 
         left_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -5950,6 +6007,8 @@ class ResearchSimulationPage(TkinterView):
         self._build_network_loading_section(left)
         self._build_parameter_section(left)
         self._build_simulation_controls_section(left)
+        self._build_export_section(left)
+        self._build_advanced_section(left)
         self._build_metrics_section(left)
 
         # Right top: visualization panel
@@ -5966,11 +6025,11 @@ class ResearchSimulationPage(TkinterView):
             text="Network Loading (CSV/XLSX)",
             bg=self.BG_COLOR,
             fg=self.FG_COLOR,
-            font=self.SUBHEADING_2_FONT,
+            font=self._SECTION_HEADER_FONT,
             padx=10,
             pady=10,
         )
-        lf.pack(fill=tk.X, pady=(0, 10))
+        lf.pack(fill=tk.X, pady=(0, self._SECTION_PAD_Y))
 
         path_entry = tk.Entry(
             lf,
@@ -5980,7 +6039,7 @@ class ResearchSimulationPage(TkinterView):
             insertbackground="#e0e0e0",
             relief=tk.GROOVE,
             highlightbackground="#444444",
-            highlightcolor="#5588bb",
+            highlightcolor="#77aadd",
             highlightthickness=1,
         )
         path_entry.pack(fill=tk.X, pady=(0, 8))
@@ -6033,24 +6092,39 @@ class ResearchSimulationPage(TkinterView):
         )
         preview_btn.pack(side=tk.LEFT, padx=(8, 0))
 
+        generate_btn = tk.Button(
+            row,
+            text="Generate Network",
+            bg="#4a3a6a",
+            fg="#ffffff",
+            activebackground="#5a4a7a",
+            activeforeground="#ffffff",
+            borderwidth=0,
+            cursor="hand2",
+            command=self._on_generate_network,
+            padx=10,
+            pady=6,
+        )
+        generate_btn.pack(side=tk.LEFT, padx=(8, 0))
+
     def _build_parameter_section(self, parent):
         lf = tk.LabelFrame(
             parent,
             text="Parameter Configuration",
             bg=self.BG_COLOR,
             fg=self.FG_COLOR,
-            font=self.SUBHEADING_2_FONT,
+            font=self._SECTION_HEADER_FONT,
             padx=10,
             pady=10,
         )
-        lf.pack(fill=tk.X, pady=(0, 10))
+        lf.pack(fill=tk.X, pady=(0, self._SECTION_PAD_Y))
 
         row = tk.Frame(lf, bg=self.BG_COLOR)
         row.pack(fill=tk.X, pady=(0, 6))
 
         lbl = tk.Label(
             row,
-            text="Applied Strain (fixed)",
+            text="Applied Strain (%)",
             bg=self.BG_COLOR,
             fg=self.FG_COLOR,
             font=self.SUBHEADING_2_FONT,
@@ -6111,12 +6185,211 @@ class ResearchSimulationPage(TkinterView):
         )
         self._strain_mode_menu.pack(side=tk.LEFT, padx=(8, 0))
 
+        # Force model selector: WLC vs eWLC
+        force_model_row = tk.Frame(lf, bg=self.BG_COLOR)
+        force_model_row.pack(fill=tk.X, pady=(0, 6))
+
+        force_model_lbl = tk.Label(
+            force_model_row,
+            text="Force Model",
+            bg=self.BG_COLOR,
+            fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT,
+            width=22,
+            anchor="w",
+        )
+        force_model_lbl.pack(side=tk.LEFT)
+
+        self._force_model_menu = tk.OptionMenu(
+            force_model_row,
+            self.force_model_var,
+            "WLC (Standard)",
+            "eWLC (Extended)",
+        )
+        self._force_model_menu.configure(
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            activebackground="#3d3d3d",
+            activeforeground="#e0e0e0",
+            highlightthickness=0,
+            relief=tk.GROOVE,
+            width=18,
+        )
+        self._force_model_menu["menu"].configure(
+            bg="#2d2d2d",
+            fg="#e0e0e0",
+            activebackground="#4a6fa5",
+            activeforeground="#ffffff",
+        )
+        self._force_model_menu.pack(side=tk.LEFT, padx=(8, 0))
+
         # Plasmin concentration: GUI-controlled only (NOT read from Excel metadata)
         # Controls the cleavage rate λ₀ in Core V2 simulation
-        self._kv_row(lf, "Plasmin concentration", self.plasmin_concentration)
-        self._kv_row(lf, "Time step", self.time_step)
-        # Max time: Simulation termination criterion (GUI-controlled, functional)
-        self._kv_row(lf, "Max time", self.max_time)
+        self._kv_row(lf, "Plasmin Conc. (µg/mL)", self.plasmin_concentration)
+        self._kv_row(lf, "Time Step (ms)", self.time_step)
+        self._kv_row(lf, "Max Time (min)", self.max_time)
+
+        # ── Chemistry Mode selector ──
+        chem_mode_row = tk.Frame(lf, bg=self.BG_COLOR)
+        chem_mode_row.pack(fill=tk.X, pady=(6, 0))
+
+        chem_mode_lbl = tk.Label(
+            chem_mode_row, text="Chemistry Mode",
+            bg=self.BG_COLOR, fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT, width=22, anchor="w",
+        )
+        chem_mode_lbl.pack(side=tk.LEFT)
+
+        self._chem_mode_menu = tk.OptionMenu(
+            chem_mode_row, self.chemistry_mode_var,
+            "Mean-Field (Gillespie)", "Agent-Based Model (ABM)",
+            command=self._on_chemistry_mode_change,
+        )
+        self._chem_mode_menu.configure(
+            bg="#2d2d2d", fg="#e0e0e0",
+            activebackground="#3d3d3d", activeforeground="#e0e0e0",
+            highlightthickness=0, relief=tk.GROOVE, width=22,
+        )
+        self._chem_mode_menu["menu"].configure(
+            bg="#2d2d2d", fg="#e0e0e0",
+            activebackground="#4a6fa5", activeforeground="#ffffff",
+        )
+        self._chem_mode_menu.pack(side=tk.LEFT, padx=(8, 0))
+
+        # ── Mechanochemical Coupling selector ──
+        mech_coupling_row = tk.Frame(lf, bg=self.BG_COLOR)
+        mech_coupling_row.pack(fill=tk.X, pady=(6, 0))
+
+        mech_coupling_lbl = tk.Label(
+            mech_coupling_row, text="Mechanochem. Coupling",
+            bg=self.BG_COLOR, fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT, width=22, anchor="w",
+        )
+        mech_coupling_lbl.pack(side=tk.LEFT)
+
+        self._mech_coupling_menu = tk.OptionMenu(
+            mech_coupling_row, self.strain_cleavage_mode_var,
+            "Inhibitory (Varju 2011)",
+            "Neutral (Topology Only)",
+            "Biphasic (Protection + Fragility)",
+            command=self._on_mech_coupling_change,
+        )
+        self._mech_coupling_menu.configure(
+            bg="#2d2d2d", fg="#e0e0e0",
+            activebackground="#3d3d3d", activeforeground="#e0e0e0",
+            highlightthickness=0, relief=tk.GROOVE, width=28,
+        )
+        self._mech_coupling_menu["menu"].configure(
+            bg="#2d2d2d", fg="#e0e0e0",
+            activebackground="#4a6fa5", activeforeground="#ffffff",
+        )
+        self._mech_coupling_menu.pack(side=tk.LEFT, padx=(8, 0))
+
+        # ── Biphasic parameters sub-frame (hidden by default) ──
+        self._biphasic_params_frame = tk.Frame(lf, bg=self.BG_COLOR)
+        # Not packed yet — shown only when Biphasic mode selected
+
+        bp_gamma_row = tk.Frame(self._biphasic_params_frame, bg=self.BG_COLOR)
+        bp_gamma_row.pack(fill=tk.X, pady=(2, 2))
+        tk.Label(bp_gamma_row, text="  γ (recovery exponent)",
+                 bg=self.BG_COLOR, fg="#b0b0b0", font=("Consolas", 9),
+                 width=24, anchor="w").pack(side=tk.LEFT)
+        tk.Entry(bp_gamma_row, textvariable=self.biphasic_gamma,
+                 bg="#1a1a1a", fg="#e0e0e0", insertbackground="#e0e0e0",
+                 font=("Consolas", 10), highlightcolor="#6699cc",
+                 width=8).pack(side=tk.LEFT, padx=(4, 0))
+
+        bp_eps_row = tk.Frame(self._biphasic_params_frame, bg=self.BG_COLOR)
+        bp_eps_row.pack(fill=tk.X, pady=(2, 2))
+        tk.Label(bp_eps_row, text="  ε* (crossover strain %)",
+                 bg=self.BG_COLOR, fg="#b0b0b0", font=("Consolas", 9),
+                 width=24, anchor="w").pack(side=tk.LEFT)
+        tk.Entry(bp_eps_row, textvariable=self.biphasic_eps_star,
+                 bg="#1a1a1a", fg="#e0e0e0", insertbackground="#e0e0e0",
+                 font=("Consolas", 10), highlightcolor="#6699cc",
+                 width=8).pack(side=tk.LEFT, padx=(4, 0))
+
+        # ── ABM Parameters sub-frame (hidden by default) ──
+        self._abm_params_frame = tk.LabelFrame(
+            lf, text="ABM Parameters",
+            bg=self.BG_COLOR, fg="#80b0d0",
+            font=("Consolas", 9, "bold"),
+            padx=8, pady=6,
+        )
+        # Not packed yet — shown only when ABM mode selected
+
+        # Strain-cleavage model (configurable, not hardcoded)
+        sc_row = tk.Frame(self._abm_params_frame, bg=self.BG_COLOR)
+        sc_row.pack(fill=tk.X, pady=(0, 4))
+        tk.Label(sc_row, text="Strain-Cleavage Model", bg=self.BG_COLOR,
+                 fg=self.FG_COLOR, font=("Consolas", 9), width=22,
+                 anchor="w").pack(side=tk.LEFT)
+        sc_menu = tk.OptionMenu(
+            sc_row, self.abm_strain_cleavage_model,
+            "Exponential", "Linear", "Constant",
+        )
+        sc_menu.configure(
+            bg="#2d2d2d", fg="#e0e0e0", highlightthickness=0,
+            relief=tk.GROOVE, width=14,
+        )
+        sc_menu["menu"].configure(bg="#2d2d2d", fg="#e0e0e0",
+                                  activebackground="#4a6fa5",
+                                  activeforeground="#ffffff")
+        sc_menu.pack(side=tk.LEFT, padx=(8, 0))
+
+        self._kv_row(self._abm_params_frame, "N Agents (or 'auto')", self.abm_n_agents)
+        self._kv_row(self._abm_params_frame, "k_on2 (M^-1 s^-1)", self.abm_k_on2)
+        self._kv_row(self._abm_params_frame, "alpha_on", self.abm_alpha_on)
+        self._kv_row(self._abm_params_frame, "k_off0 (s^-1)", self.abm_k_off0)
+        self._kv_row(self._abm_params_frame, "delta (nm)", self.abm_delta_off)
+        self._kv_row(self._abm_params_frame, "k_cat0 (s^-1)", self.abm_k_cat0)
+        self._kv_row(self._abm_params_frame, "beta_cat", self.abm_beta_cat)
+        self._kv_row(self._abm_params_frame, "p_stay (0-1)", self.abm_p_stay)
+
+        # Toggle checkbuttons
+        toggle_frame = tk.Frame(self._abm_params_frame, bg=self.BG_COLOR)
+        toggle_frame.pack(fill=tk.X, pady=(4, 0))
+
+        tk.Checkbutton(
+            toggle_frame, text="Strain-dependent k_on",
+            variable=self.abm_strain_dep_kon,
+            bg=self.BG_COLOR, fg="#b0b0b0", selectcolor="#2d2d2d",
+            activebackground=self.BG_COLOR, activeforeground="#e0e0e0",
+            font=("Consolas", 9),
+        ).pack(anchor="w")
+
+        tk.Checkbutton(
+            toggle_frame, text="Strain-dependent k_off",
+            variable=self.abm_strain_dep_koff,
+            bg=self.BG_COLOR, fg="#b0b0b0", selectcolor="#2d2d2d",
+            activebackground=self.BG_COLOR, activeforeground="#e0e0e0",
+            font=("Consolas", 9),
+        ).pack(anchor="w")
+
+        tk.Checkbutton(
+            toggle_frame, text="Update k_cat dynamically",
+            variable=self.abm_update_kcat_dynamic,
+            bg=self.BG_COLOR, fg="#b0b0b0", selectcolor="#2d2d2d",
+            activebackground=self.BG_COLOR, activeforeground="#e0e0e0",
+            font=("Consolas", 9),
+        ).pack(anchor="w")
+
+    def _on_chemistry_mode_change(self, *args):
+        """Show or hide ABM parameter panel based on chemistry mode selection."""
+        mode = self.chemistry_mode_var.get()
+        if "ABM" in mode:
+            self._abm_params_frame.pack(fill=tk.X, pady=(5, 0))
+            self.plasmin_concentration.set("4.36")  # ~50 nM -> ~181 agents for demo
+        else:
+            self._abm_params_frame.pack_forget()
+
+    def _on_mech_coupling_change(self, *args):
+        """Show or hide biphasic parameter panel based on coupling mode."""
+        mode = self.strain_cleavage_mode_var.get()
+        if "Biphasic" in mode:
+            self._biphasic_params_frame.pack(fill=tk.X, pady=(4, 0))
+        else:
+            self._biphasic_params_frame.pack_forget()
 
     def _build_simulation_controls_section(self, parent):
         lf = tk.LabelFrame(
@@ -6124,16 +6397,16 @@ class ResearchSimulationPage(TkinterView):
             text="Simulation Controls",
             bg=self.BG_COLOR,
             fg=self.FG_COLOR,
-            font=self.SUBHEADING_2_FONT,
+            font=self._SECTION_HEADER_FONT,
             padx=10,
             pady=10,
         )
-        lf.pack(fill=tk.X, pady=(0, 10))
+        lf.pack(fill=tk.X, pady=(0, self._SECTION_PAD_Y))
 
         row = tk.Frame(lf, bg=self.BG_COLOR)
         row.pack(fill=tk.X)
 
-        start_btn = tk.Button(
+        self._start_btn = tk.Button(
             row,
             text="Start",
             bg="#2d6a4f",
@@ -6144,25 +6417,26 @@ class ResearchSimulationPage(TkinterView):
             borderwidth=0,
             cursor="hand2",
             command=self._on_start,
-            padx=12,
+            padx=14,
             pady=8,
         )
-        start_btn.pack(side=tk.LEFT)
+        self._start_btn.pack(side=tk.LEFT)
 
-        pause_btn = tk.Button(
+        self._pause_btn = tk.Button(
             row,
             text="Pause",
             bg="#8a7e3b",
             fg="#ffffff",
             activebackground="#aa9e5b",
             activeforeground="#ffffff",
+            font=("Consolas", 10, "bold"),
             borderwidth=0,
             cursor="hand2",
             command=self._on_pause,
-            padx=12,
+            padx=14,
             pady=8,
         )
-        pause_btn.pack(side=tk.LEFT, padx=(8, 0))
+        self._pause_btn.pack(side=tk.LEFT, padx=(8, 0))
 
         stop_btn = tk.Button(
             row,
@@ -6171,10 +6445,11 @@ class ResearchSimulationPage(TkinterView):
             fg="#ffffff",
             activebackground="#ac5a5a",
             activeforeground="#ffffff",
+            font=("Consolas", 10, "bold"),
             borderwidth=0,
             cursor="hand2",
             command=self._on_stop,
-            padx=12,
+            padx=14,
             pady=8,
         )
         stop_btn.pack(side=tk.LEFT, padx=(8, 0))
@@ -6230,7 +6505,7 @@ class ResearchSimulationPage(TkinterView):
             insertbackground="#e0e0e0",
             relief=tk.GROOVE,
             highlightbackground="#444444",
-            highlightcolor="#5588bb",
+            highlightcolor="#77aadd",
             highlightthickness=1,
         )
         threshold_entry.pack(side=tk.LEFT)
@@ -6288,355 +6563,271 @@ class ResearchSimulationPage(TkinterView):
             font=self.SUBHEADING_2_FONT,
         ).pack(side=tk.LEFT)
 
-        export_row = tk.Frame(lf, bg=self.BG_COLOR)
-        export_row.pack(fill=tk.X, pady=(8, 0))
-
-        export_btn = tk.Button(
-            export_row,
-            text="Export Experiment Log",
-            bg="#2d4a5a",
-            fg="#ffffff",
-            activebackground="#3d5a6a",
-            activeforeground="#ffffff",
-            borderwidth=0,
-            cursor="hand2",
-            command=self._on_export_experiment_log,
-            padx=12,
-            pady=8,
-        )
-        export_btn.pack(side=tk.LEFT)
-
-        snapshot_row = tk.Frame(lf, bg=self.BG_COLOR)
-        snapshot_row.pack(fill=tk.X, pady=(8, 0))
-
-        snapshot_btn = tk.Button(
-            snapshot_row,
-            text="Export Network Snapshot",
-            bg="#2d4a5a",
-            fg="#ffffff",
-            activebackground="#3d5a6a",
-            activeforeground="#ffffff",
-            borderwidth=0,
-            cursor="hand2",
-            command=self._on_export_network_snapshot,
-            padx=12,
-            pady=8,
-        )
-        snapshot_btn.pack(side=tk.LEFT)
-
-        fractured_row = tk.Frame(lf, bg=self.BG_COLOR)
-        fractured_row.pack(fill=tk.X, pady=(8, 0))
-
-        fractured_btn = tk.Button(
-            fractured_row,
-            text="Export Fractured History",
-            bg="#2d4a5a",
-            fg="#ffffff",
-            activebackground="#3d5a6a",
-            activeforeground="#ffffff",
-            borderwidth=0,
-            cursor="hand2",
-            command=self._on_export_fractured_history,
-            padx=12,
-            pady=8,
-        )
-        fractured_btn.pack(side=tk.LEFT)
-
-        degradation_row = tk.Frame(lf, bg=self.BG_COLOR)
-        degradation_row.pack(fill=tk.X, pady=(8, 0))
-
-        degradation_btn = tk.Button(
-            degradation_row,
-            text="Export Degradation Order",
-            bg="#2d4a5a",
-            fg="#ffffff",
-            activebackground="#3d5a6a",
-            activeforeground="#ffffff",
-            borderwidth=0,
-            cursor="hand2",
-            command=self._on_export_degradation_order,
-            padx=12,
-            pady=8,
-        )
-        degradation_btn.pack(side=tk.LEFT)
-
-        # Export Diagnostics (tension/strain distributions, rupture reasons)
-        diag_row = tk.Frame(lf, bg=self.BG_COLOR)
-        diag_row.pack(fill=tk.X, pady=(8, 0))
-
-        diag_btn = tk.Button(
-            diag_row,
-            text="Export Diagnostics",
-            bg="#2d5a27",
-            fg="#ffffff",
-            activebackground="#4d7a47",
-            activeforeground="#ffffff",
-            borderwidth=0,
-            cursor="hand2",
-            command=self._on_export_diagnostics,
-            padx=12,
-            pady=8,
-        )
-        diag_btn.pack(side=tk.LEFT)
-
-        replay_row = tk.Frame(lf, bg=self.BG_COLOR)
-        replay_row.pack(fill=tk.X, pady=(8, 0))
-
-        replay_btn = tk.Button(
-            replay_row,
-            text="Replay Batch Check",
-            bg="#3a3a2a",
-            fg="#cccc88",
-            activebackground="#4a4a3a",
-            activeforeground="#eeee99",
-            borderwidth=0,
-            cursor="hand2",
-            command=self._on_replay_batch_check,
-            padx=12,
-            pady=8,
-        )
-        replay_btn.pack(side=tk.LEFT)
-
-        # Bounded, explicit N-batch runner controls
-        run_row = tk.Frame(lf, bg=self.BG_COLOR)
-        run_row.pack(fill=tk.X, pady=(10, 0))
-
-        run_label = tk.Label(
-            run_row,
-            text="Batches to Run",
+    def _build_export_section(self, parent):
+        """Export buttons in a 2-column grid layout (3 rows x 2 cols)."""
+        lf = tk.LabelFrame(
+            parent,
+            text="Export",
             bg=self.BG_COLOR,
             fg=self.FG_COLOR,
-            font=self.SUBHEADING_2_FONT,
-            anchor="w",
+            font=self._SECTION_HEADER_FONT,
+            padx=10,
+            pady=8,
         )
-        run_label.pack(side=tk.LEFT)
+        lf.pack(fill=tk.X, pady=(0, self._SECTION_PAD_Y))
 
-        run_entry = tk.Entry(
+        grid = tk.Frame(lf, bg=self.BG_COLOR)
+        grid.pack(fill=tk.X)
+        grid.columnconfigure(0, weight=1)
+        grid.columnconfigure(1, weight=1)
+
+        export_buttons = [
+            ("Experiment Log", self._on_export_experiment_log),
+            ("Network Snapshot", self._on_export_network_snapshot),
+            ("Fractured History", self._on_export_fractured_history),
+            ("Degradation Order", self._on_export_degradation_order),
+            ("Diagnostics", self._on_export_diagnostics),
+            ("Replay Batch Check", self._on_replay_batch_check),
+        ]
+
+        for idx, (text, cmd) in enumerate(export_buttons):
+            r, c = divmod(idx, 2)
+            btn = tk.Button(
+                grid,
+                text=text,
+                bg=self._EXPORT_BTN_BG,
+                fg="#ffffff",
+                activebackground=self._EXPORT_BTN_ACTIVE_BG,
+                activeforeground="#ffffff",
+                borderwidth=0,
+                cursor="hand2",
+                command=cmd,
+                padx=self._BTN_PAD_X,
+                pady=self._BTN_PAD_Y,
+            )
+            btn.grid(
+                row=r, column=c, sticky="ew",
+                padx=(0 if c == 0 else 4, 4 if c == 0 else 0),
+                pady=(0 if r == 0 else 4, 0),
+            )
+
+    def _build_advanced_section(self, parent):
+        """Collapsible advanced controls: N-batch, checkpoints, sweeps."""
+        outer, content, _toggle = self._make_collapsible_section(
+            parent, "Advanced", default_open=False,
+        )
+        outer.pack(fill=tk.X, pady=(0, self._SECTION_PAD_Y))
+
+        # --- N-batch runner ---
+        sub_label = tk.Label(
+            content, text="N-Batch Runner",
+            bg=self.BG_COLOR, fg="#88aacc",
+            font=("Consolas", 9, "bold"), anchor="w",
+        )
+        sub_label.pack(anchor="w", pady=(4, 2))
+
+        run_row = tk.Frame(content, bg=self.BG_COLOR)
+        run_row.pack(fill=tk.X)
+
+        tk.Label(
+            run_row, text="Batches to Run",
+            bg=self.BG_COLOR, fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT, anchor="w",
+        ).pack(side=tk.LEFT)
+
+        tk.Entry(
             run_row,
             textvariable=self.batches_to_run,
-            bg="#2d2d2d",
-            fg="#e0e0e0",
+            bg="#2d2d2d", fg="#e0e0e0",
             insertbackground="#e0e0e0",
             relief=tk.GROOVE,
             highlightbackground="#444444",
-            highlightcolor="#5588bb",
+            highlightcolor="#77aadd",
             highlightthickness=1,
             width=8,
-        )
-        run_entry.pack(side=tk.LEFT, padx=(10, 10))
+        ).pack(side=tk.LEFT, padx=(10, 10))
 
-        run_btn = tk.Button(
+        tk.Button(
             run_row,
             text="Run N Batches",
-            bg="#2d6a4f",
-            fg="#ffffff",
+            bg="#2d6a4f", fg="#ffffff",
             activebackground="#3d7a5f",
             activeforeground="#ffffff",
-            borderwidth=0,
-            cursor="hand2",
+            borderwidth=0, cursor="hand2",
             command=self._on_run_n_batches,
-            padx=12,
-            pady=8,
+            padx=self._BTN_PAD_X, pady=self._BTN_PAD_Y,
+        ).pack(side=tk.LEFT)
+
+        self._separator(content)
+
+        # --- Checkpoint operations (side-by-side) ---
+        cp_label = tk.Label(
+            content, text="Checkpoints",
+            bg=self.BG_COLOR, fg="#88aacc",
+            font=("Consolas", 9, "bold"), anchor="w",
         )
-        run_btn.pack(side=tk.LEFT)
+        cp_label.pack(anchor="w", pady=(0, 2))
 
-        # Deterministic checkpoint resume (explicit action)
-        resume_row = tk.Frame(lf, bg=self.BG_COLOR)
-        resume_row.pack(fill=tk.X, pady=(10, 0))
+        cp_row = tk.Frame(content, bg=self.BG_COLOR)
+        cp_row.pack(fill=tk.X)
 
-        resume_btn = tk.Button(
-            resume_row,
+        tk.Button(
+            cp_row,
             text="Resume From Checkpoint",
-            bg="#2d5a8c",
-            fg="#ffffff",
+            bg="#2d5a8c", fg="#ffffff",
             activebackground="#3d6a9c",
             activeforeground="#ffffff",
-            borderwidth=0,
-            cursor="hand2",
+            borderwidth=0, cursor="hand2",
             command=self._on_resume_from_checkpoint,
-            padx=12,
-            pady=8,
-        )
-        resume_btn.pack(side=tk.LEFT)
+            padx=self._BTN_PAD_X, pady=self._BTN_PAD_Y,
+        ).pack(side=tk.LEFT)
 
-        fork_row = tk.Frame(lf, bg=self.BG_COLOR)
-        fork_row.pack(fill=tk.X, pady=(8, 0))
-
-        fork_btn = tk.Button(
-            fork_row,
+        tk.Button(
+            cp_row,
             text="Fork From Checkpoint",
-            bg="#2d5a8c",
-            fg="#ffffff",
+            bg="#2d5a8c", fg="#ffffff",
             activebackground="#3d6a9c",
             activeforeground="#ffffff",
-            borderwidth=0,
-            cursor="hand2",
+            borderwidth=0, cursor="hand2",
             command=self._on_fork_from_checkpoint,
-            padx=12,
-            pady=8,
+            padx=self._BTN_PAD_X, pady=self._BTN_PAD_Y,
+        ).pack(side=tk.LEFT, padx=(8, 0))
+
+        self._separator(content)
+
+        # --- Parameter Sweep ---
+        sw_label = tk.Label(
+            content, text="Parameter Sweep",
+            bg=self.BG_COLOR, fg="#88aacc",
+            font=("Consolas", 9, "bold"), anchor="w",
         )
-        fork_btn.pack(side=tk.LEFT)
+        sw_label.pack(anchor="w", pady=(0, 2))
 
-        # Deterministic parameter sweep (fan-out)
-        sweep_row = tk.Frame(lf, bg=self.BG_COLOR)
-        sweep_row.pack(fill=tk.X, pady=(10, 0))
+        sweep_row = tk.Frame(content, bg=self.BG_COLOR)
+        sweep_row.pack(fill=tk.X)
 
-        sweep_param_label = tk.Label(
-            sweep_row,
-            text="Sweep Parameter",
-            bg=self.BG_COLOR,
-            fg=self.FG_COLOR,
-            font=self.SUBHEADING_2_FONT,
-            anchor="w",
-        )
-        sweep_param_label.grid(row=0, column=0, sticky="w")
+        tk.Label(
+            sweep_row, text="Sweep Parameter",
+            bg=self.BG_COLOR, fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT, anchor="w",
+        ).grid(row=0, column=0, sticky="w")
 
-        sweep_param_entry = tk.Entry(
+        tk.Entry(
             sweep_row,
             textvariable=self.sweep_param_name,
-            bg="#2d2d2d",
-            fg="#e0e0e0",
+            bg="#2d2d2d", fg="#e0e0e0",
             insertbackground="#e0e0e0",
             relief=tk.GROOVE,
             highlightbackground="#444444",
-            highlightcolor="#5588bb",
-            highlightthickness=1,
-            width=18,
-        )
-        sweep_param_entry.grid(row=0, column=1, padx=(10, 0), sticky="w")
+            highlightcolor="#77aadd",
+            highlightthickness=1, width=18,
+        ).grid(row=0, column=1, padx=(10, 0), sticky="w")
 
-        sweep_vals_label = tk.Label(
-            sweep_row,
-            text="Sweep Values (comma-separated)",
-            bg=self.BG_COLOR,
-            fg=self.FG_COLOR,
-            font=self.SUBHEADING_2_FONT,
-            anchor="w",
-        )
-        sweep_vals_label.grid(row=1, column=0, sticky="w", pady=(8, 0))
+        tk.Label(
+            sweep_row, text="Values (CSV)",
+            bg=self.BG_COLOR, fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT, anchor="w",
+        ).grid(row=1, column=0, sticky="w", pady=(6, 0))
 
-        sweep_vals_entry = tk.Entry(
+        tk.Entry(
             sweep_row,
             textvariable=self.sweep_values_csv,
-            bg="#2d2d2d",
-            fg="#e0e0e0",
+            bg="#2d2d2d", fg="#e0e0e0",
             insertbackground="#e0e0e0",
             relief=tk.GROOVE,
             highlightbackground="#444444",
-            highlightcolor="#5588bb",
-            highlightthickness=1,
-            width=28,
-        )
-        sweep_vals_entry.grid(row=1, column=1, padx=(10, 0), sticky="w", pady=(8, 0))
+            highlightcolor="#77aadd",
+            highlightthickness=1, width=28,
+        ).grid(row=1, column=1, padx=(10, 0), sticky="w", pady=(6, 0))
 
-        sweep_batches_label = tk.Label(
-            sweep_row,
-            text="Batches / Branch",
-            bg=self.BG_COLOR,
-            fg=self.FG_COLOR,
-            font=self.SUBHEADING_2_FONT,
-            anchor="w",
-        )
-        sweep_batches_label.grid(row=2, column=0, sticky="w", pady=(8, 0))
+        tk.Label(
+            sweep_row, text="Batches / Branch",
+            bg=self.BG_COLOR, fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT, anchor="w",
+        ).grid(row=2, column=0, sticky="w", pady=(6, 0))
 
-        sweep_batches_entry = tk.Entry(
+        tk.Entry(
             sweep_row,
             textvariable=self.sweep_batches_per_branch,
-            bg="#2d2d2d",
-            fg="#e0e0e0",
+            bg="#2d2d2d", fg="#e0e0e0",
             insertbackground="#e0e0e0",
             relief=tk.GROOVE,
             highlightbackground="#444444",
-            highlightcolor="#5588bb",
-            highlightthickness=1,
-            width=8,
-        )
-        sweep_batches_entry.grid(row=2, column=1, padx=(10, 0), sticky="w", pady=(8, 0))
+            highlightcolor="#77aadd",
+            highlightthickness=1, width=8,
+        ).grid(row=2, column=1, padx=(10, 0), sticky="w", pady=(6, 0))
 
-        sweep_btn = tk.Button(
+        tk.Button(
             sweep_row,
             text="Run Parameter Sweep",
-            bg="#5a3a6a",
-            fg="#ffffff",
+            bg="#5a3a6a", fg="#ffffff",
             activebackground="#6a4a7a",
             activeforeground="#ffffff",
-            borderwidth=0,
-            cursor="hand2",
+            borderwidth=0, cursor="hand2",
             command=self._on_run_parameter_sweep,
-            padx=12,
-            pady=8,
-        )
-        sweep_btn.grid(row=3, column=0, columnspan=2, sticky="w", pady=(10, 0))
+            padx=self._BTN_PAD_X, pady=self._BTN_PAD_Y,
+        ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
-        # Grid sweep UI (JSON input)
-        grid_row = tk.Frame(lf, bg=self.BG_COLOR)
-        grid_row.pack(fill=tk.X, pady=(12, 0))
+        self._separator(content)
 
-        grid_label = tk.Label(
-            grid_row,
-            text="Grid Parameters (JSON)",
-            bg=self.BG_COLOR,
-            fg=self.FG_COLOR,
-            font=self.SUBHEADING_2_FONT,
-            anchor="w",
+        # --- Grid Sweep ---
+        gs_label = tk.Label(
+            content, text="Grid Sweep",
+            bg=self.BG_COLOR, fg="#88aacc",
+            font=("Consolas", 9, "bold"), anchor="w",
         )
-        grid_label.pack(anchor="w")
+        gs_label.pack(anchor="w", pady=(0, 2))
+
+        grid_row = tk.Frame(content, bg=self.BG_COLOR)
+        grid_row.pack(fill=tk.X)
+
+        tk.Label(
+            grid_row, text="Grid Parameters (JSON)",
+            bg=self.BG_COLOR, fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT, anchor="w",
+        ).pack(anchor="w")
 
         self._grid_param_text = tk.Text(
             grid_row,
-            height=4,
-            width=44,
-            bg="gray14",
-            fg=self.FG_COLOR,
+            height=4, width=44,
+            bg="gray14", fg=self.FG_COLOR,
             insertbackground=self.FG_COLOR,
             relief=tk.FLAT,
         )
-        self._grid_param_text.pack(fill=tk.X, pady=(6, 0))
-        # Example placeholder (deterministic string; user may overwrite)
+        self._grid_param_text.pack(fill=tk.X, pady=(4, 0))
         if self._grid_param_text.get("1.0", "end").strip() == "":
             self._grid_param_text.insert("1.0", '{"force_alpha":[0.5,1.0],"memory_mu":[0.1,0.3]}')
 
         grid_bp_row = tk.Frame(grid_row, bg=self.BG_COLOR)
-        grid_bp_row.pack(fill=tk.X, pady=(8, 0))
+        grid_bp_row.pack(fill=tk.X, pady=(6, 0))
 
-        grid_bp_label = tk.Label(
-            grid_bp_row,
-            text="Batches / Branch",
-            bg=self.BG_COLOR,
-            fg=self.FG_COLOR,
-            font=self.SUBHEADING_2_FONT,
-            anchor="w",
-        )
-        grid_bp_label.pack(side=tk.LEFT)
+        tk.Label(
+            grid_bp_row, text="Batches / Branch",
+            bg=self.BG_COLOR, fg=self.FG_COLOR,
+            font=self.SUBHEADING_2_FONT, anchor="w",
+        ).pack(side=tk.LEFT)
 
-        grid_bp_entry = tk.Entry(
+        tk.Entry(
             grid_bp_row,
             textvariable=self.grid_batches_per_branch,
-            bg="#2d2d2d",
-            fg="#e0e0e0",
+            bg="#2d2d2d", fg="#e0e0e0",
             insertbackground="#e0e0e0",
             relief=tk.GROOVE,
             highlightbackground="#444444",
-            highlightcolor="#5588bb",
-            highlightthickness=1,
-            width=8,
-        )
-        grid_bp_entry.pack(side=tk.LEFT, padx=(10, 10))
+            highlightcolor="#77aadd",
+            highlightthickness=1, width=8,
+        ).pack(side=tk.LEFT, padx=(10, 10))
 
-        grid_btn = tk.Button(
+        tk.Button(
             grid_bp_row,
             text="Run Grid Sweep",
-            bg="#5a3a6a",
-            fg="#ffffff",
+            bg="#5a3a6a", fg="#ffffff",
             activebackground="#6a4a7a",
             activeforeground="#ffffff",
-            borderwidth=0,
-            cursor="hand2",
+            borderwidth=0, cursor="hand2",
             command=self._on_run_grid_sweep,
-            padx=12,
-            pady=8,
-        )
-        grid_btn.pack(side=tk.LEFT)
+            padx=self._BTN_PAD_X, pady=self._BTN_PAD_Y,
+        ).pack(side=tk.LEFT)
 
     # Strain is a fixed experimental parameter (Applied Strain (fixed)) and no longer an interactive control.
 
@@ -6646,7 +6837,7 @@ class ResearchSimulationPage(TkinterView):
             text="Simulation Metrics",
             bg=self.BG_COLOR,
             fg=self.FG_COLOR,
-            font=self.SUBHEADING_2_FONT,
+            font=self._SECTION_HEADER_FONT,
             padx=10,
             pady=10,
         )
@@ -6658,9 +6849,10 @@ class ResearchSimulationPage(TkinterView):
             textvariable=self.metric_status,
             bg="#1a3a1a",
             fg="#66cc66",
-            font=(self.view.FONT_FAMILY, 11, "bold"),
+            font=(self.view.FONT_FAMILY, 12, "bold"),
             anchor="center",
             pady=4,
+            relief=tk.RIDGE,
         )
         self._status_banner.pack(fill=tk.X, pady=(0, 8))
 
@@ -6708,8 +6900,8 @@ class ResearchSimulationPage(TkinterView):
                  fg="#cc6666", font=(self.view.FONT_FAMILY, 12, "bold")).pack(anchor="w")
 
         # Standard metric rows
-        self._metric_row(lf, "Time (minutes)", self.metric_time_min)
-        self._metric_row(lf, "Lysis %", self.metric_lysis_pct)
+        self._metric_row(lf, "Time (min)", self.metric_time_min)
+        self._metric_row(lf, "Lysis (%)", self.metric_lysis_pct)
         self._metric_row(lf, "Mean tension (N)", self.metric_mean_tension)
 
         # Max tension with dynamic color warning for force spikes
@@ -6855,44 +7047,39 @@ class ResearchSimulationPage(TkinterView):
         if batch_num % 10 == 0 or not self.controller.state.is_running:
             self._update_plots()
 
-    def _update_plots(self):
-        """Redraw the real-time plots with current data (lysis, tension, degradation)."""
-        if self._lysis_ax is None or self._tension_ax is None or self._plot_canvas_widget is None:
-            return
+    def _init_plot_lines(self):
+        """Initialize plot line objects and axis decorations once.
 
-        # Update lysis plot
-        self._lysis_ax.clear()
+        Subsequent updates use set_xdata/set_ydata instead of ax.clear() + ax.plot(),
+        avoiding expensive axis recreation on every frame.
+        """
+        # Lysis plot setup
         self._lysis_ax.set_facecolor("#1a1a1a")
         self._lysis_ax.set_ylabel("Lysis %", fontsize=8, color="#aaaaaa")
         self._lysis_ax.set_title("Lysis Progression", fontsize=9, color="#cccccc")
         self._lysis_ax.tick_params(colors="#888888", labelsize=7)
         for spine in self._lysis_ax.spines.values():
             spine.set_color("#333333")
-        if self._plot_batches:
-            self._lysis_ax.plot(self._plot_batches, self._plot_lysis_history,
-                               color="#ff6666", linewidth=1.5, marker="o", markersize=3)
-            self._lysis_ax.fill_between(self._plot_batches, self._plot_lysis_history,
-                                        alpha=0.15, color="#ff6666")
+        self._lysis_line, = self._lysis_ax.plot([], [], color="#ff6666", linewidth=1.5,
+                                                 marker="o", markersize=3)
+        self._lysis_fill = None
 
-        # Update tension plot
-        self._tension_ax.clear()
+        # Tension plot setup
         self._tension_ax.set_facecolor("#1a1a1a")
         self._tension_ax.set_ylabel("Tension (N)", fontsize=8, color="#aaaaaa")
         self._tension_ax.set_title("Tension History", fontsize=9, color="#cccccc")
         self._tension_ax.tick_params(colors="#888888", labelsize=7)
         for spine in self._tension_ax.spines.values():
             spine.set_color("#333333")
-        if self._plot_batches:
-            self._tension_ax.plot(self._plot_batches, self._plot_mean_tension_history,
-                                  color="#66aaff", linewidth=1.5, label="Mean", marker="o", markersize=3)
-            self._tension_ax.plot(self._plot_batches, self._plot_max_tension_history,
-                                  color="#ffaa44", linewidth=1.0, label="Max", linestyle="--", marker="s", markersize=2)
-            self._tension_ax.legend(fontsize=7, facecolor="#1a1a1a", edgecolor="#333333",
-                                    labelcolor="#aaaaaa", loc="upper right")
+        self._tension_mean_line, = self._tension_ax.plot([], [], color="#66aaff", linewidth=1.5,
+                                                          label="Mean", marker="o", markersize=3)
+        self._tension_max_line, = self._tension_ax.plot([], [], color="#ffaa44", linewidth=1.0,
+                                                         label="Max", linestyle="--", marker="s", markersize=2)
+        self._tension_ax.legend(fontsize=7, facecolor="#1a1a1a", edgecolor="#333333",
+                                labelcolor="#aaaaaa", loc="upper right")
 
-        # Update degradation plot (mean integrity + cleavage events)
+        # Degradation plot setup
         if self._degradation_ax is not None:
-            self._degradation_ax.clear()
             self._degradation_ax.set_facecolor("#1a1a1a")
             self._degradation_ax.set_xlabel("Batch", fontsize=8, color="#aaaaaa")
             self._degradation_ax.set_ylabel("Mean S", fontsize=8, color="#aaaaaa")
@@ -6900,30 +7087,74 @@ class ResearchSimulationPage(TkinterView):
             self._degradation_ax.tick_params(colors="#888888", labelsize=7)
             for spine in self._degradation_ax.spines.values():
                 spine.set_color("#333333")
-            if self._plot_batches and self._plot_mean_integrity_history:
-                self._degradation_ax.plot(self._plot_batches, self._plot_mean_integrity_history,
-                                          color="#66cc66", linewidth=1.5, label="Mean Integrity (S)")
-                self._degradation_ax.fill_between(self._plot_batches, self._plot_mean_integrity_history,
-                                                   alpha=0.1, color="#66cc66")
-                self._degradation_ax.set_ylim(-0.05, 1.05)
+            self._degradation_ax.set_ylim(-0.05, 1.05)
+            self._degradation_line, = self._degradation_ax.plot([], [], color="#66cc66",
+                                                                 linewidth=1.5, label="Mean Integrity (S)")
+            # Twin axis for cleavage events
+            if not hasattr(self, '_degradation_ax2') or self._degradation_ax2 is None:
+                self._degradation_ax2 = self._degradation_ax.twinx()
+            ax2 = self._degradation_ax2
+            ax2.set_facecolor("#1a1a1a")
+            ax2.set_ylabel("Cleavage Events", fontsize=8, color="#ff9944")
+            ax2.tick_params(colors="#ff9944", labelsize=7)
+            ax2.spines['right'].set_color("#ff9944")
+            self._cleavage_line, = ax2.plot([], [], color="#ff9944", linewidth=1.0,
+                                             linestyle="--", label="Cleavage Events")
 
-                # Reuse cached twin axis to avoid memory leak
-                if not hasattr(self, '_degradation_ax2') or self._degradation_ax2 is None:
-                    self._degradation_ax2 = self._degradation_ax.twinx()
+        self._plot_lines_initialized = True
+
+    def _update_plots(self):
+        """Update real-time plots using set_xdata/set_ydata (fast path)."""
+        if self._lysis_ax is None or self._tension_ax is None or self._plot_canvas_widget is None:
+            return
+
+        if not self._plot_lines_initialized:
+            self._init_plot_lines()
+
+        batches = self._plot_batches
+        if not batches:
+            try:
+                self._plot_canvas_widget.draw_idle()
+            except Exception:
+                pass
+            return
+
+        # Update lysis plot data
+        self._lysis_line.set_xdata(batches)
+        self._lysis_line.set_ydata(self._plot_lysis_history)
+        # Remove old fill, add new one
+        if self._lysis_fill is not None:
+            self._lysis_fill.remove()
+        self._lysis_fill = self._lysis_ax.fill_between(batches, self._plot_lysis_history,
+                                                        alpha=0.15, color="#ff6666")
+        self._lysis_ax.set_xlim(batches[0], batches[-1])
+        lysis_max = max(self._plot_lysis_history) if self._plot_lysis_history else 1.0
+        self._lysis_ax.set_ylim(0, max(lysis_max * 1.1, 0.01))
+
+        # Update tension plot data
+        self._tension_mean_line.set_xdata(batches)
+        self._tension_mean_line.set_ydata(self._plot_mean_tension_history)
+        self._tension_max_line.set_xdata(batches)
+        self._tension_max_line.set_ydata(self._plot_max_tension_history)
+        self._tension_ax.set_xlim(batches[0], batches[-1])
+        all_tensions = self._plot_mean_tension_history + self._plot_max_tension_history
+        t_max = max(all_tensions) if all_tensions else 1e-9
+        self._tension_ax.set_ylim(0, t_max * 1.1)
+
+        # Update degradation plot data
+        if self._degradation_ax is not None and self._degradation_line is not None:
+            self._degradation_line.set_xdata(batches)
+            self._degradation_line.set_ydata(self._plot_mean_integrity_history)
+            self._degradation_ax.set_xlim(batches[0], batches[-1])
+
+            if self._cleavage_line is not None and self._plot_cleavage_events_history:
+                self._cleavage_line.set_xdata(batches)
+                self._cleavage_line.set_ydata(self._plot_cleavage_events_history)
                 ax2 = self._degradation_ax2
-                ax2.clear()
-                ax2.set_facecolor("#1a1a1a")
-                ax2.plot(self._plot_batches, self._plot_cleavage_events_history,
-                         color="#ff9944", linewidth=1.0, linestyle="--", label="Cleavage Events")
-                ax2.set_ylabel("Cleavage Events", fontsize=8, color="#ff9944")
-                ax2.tick_params(colors="#ff9944", labelsize=7)
-                ax2.spines['right'].set_color("#ff9944")
-
-                lines1, labels1 = self._degradation_ax.get_legend_handles_labels()
-                lines2, labels2 = ax2.get_legend_handles_labels()
-                self._degradation_ax.legend(lines1 + lines2, labels1 + labels2,
-                                            fontsize=7, facecolor="#1a1a1a", edgecolor="#333333",
-                                            labelcolor="#aaaaaa", loc="center right")
+                if ax2 is not None:
+                    c_max = max(self._plot_cleavage_events_history) if self._plot_cleavage_events_history else 1
+                    ax2.set_xlim(batches[0], batches[-1])
+                    ax2.set_ylim(0, max(c_max * 1.1, 1))
 
         try:
             self._plot_canvas_widget.draw_idle()
@@ -6931,13 +7162,22 @@ class ResearchSimulationPage(TkinterView):
             pass
 
     def _on_clear_plots(self):
-        """Clear all plot data and redraw empty plots."""
+        """Clear all plot data and reinitialize plot lines."""
         self._plot_batches.clear()
         self._plot_lysis_history.clear()
         self._plot_mean_tension_history.clear()
         self._plot_max_tension_history.clear()
         self._plot_mean_integrity_history.clear()
         self._plot_cleavage_events_history.clear()
+        # Force full plot reinitialization
+        self._plot_lines_initialized = False
+        self._lysis_fill = None
+        if self._lysis_ax:
+            self._lysis_ax.clear()
+        if self._tension_ax:
+            self._tension_ax.clear()
+        if self._degradation_ax:
+            self._degradation_ax.clear()
         self._degradation_ax2 = None
         self._update_plots()
 
@@ -6993,6 +7233,55 @@ class ResearchSimulationPage(TkinterView):
             anchor="e",
         )
         val.pack(side=tk.RIGHT)
+
+    def _make_collapsible_section(self, parent, title, default_open=False):
+        """Collapsible section with clickable [+]/[-] header bar.
+
+        Returns (outer_frame, content_frame, toggle_func).
+        """
+        outer = tk.Frame(parent, bg=self.BG_COLOR)
+
+        header = tk.Frame(outer, bg="#1e2e3e", cursor="hand2")
+        header.pack(fill=tk.X)
+
+        indicator_var = tk.StringVar(value="[-]" if default_open else "[+]")
+        indicator = tk.Label(
+            header, textvariable=indicator_var,
+            bg="#1e2e3e", fg="#88aacc",
+            font=("Consolas", 10, "bold"),
+        )
+        indicator.pack(side=tk.LEFT, padx=(6, 4), pady=4)
+
+        label = tk.Label(
+            header, text=title,
+            bg="#1e2e3e", fg="#ccddee",
+            font=self._SECTION_HEADER_FONT,
+        )
+        label.pack(side=tk.LEFT, pady=4)
+
+        content = tk.Frame(outer, bg=self.BG_COLOR)
+        if default_open:
+            content.pack(fill=tk.X, pady=(4, 0))
+
+        def toggle(event=None):
+            if content.winfo_manager():
+                content.pack_forget()
+                indicator_var.set("[+]")
+            else:
+                content.pack(fill=tk.X, pady=(4, 0))
+                indicator_var.set("[-]")
+
+        header.bind("<Button-1>", toggle)
+        indicator.bind("<Button-1>", toggle)
+        label.bind("<Button-1>", toggle)
+
+        return outer, content, toggle
+
+    def _separator(self, parent):
+        """Thin 1px horizontal separator line."""
+        sep = tk.Frame(parent, bg=self._SEPARATOR_COLOR, height=1)
+        sep.pack(fill=tk.X, pady=(8, 8))
+        return sep
 
     # Callbacks (stubs)
     def _on_back_to_home(self):
@@ -7147,6 +7436,18 @@ class ResearchSimulationPage(TkinterView):
         """Core V2: Start simulation with configured parameters."""
         Logger.log("ResearchSimulationPage: start (Core V2)")
 
+        # If simulation is already running but paused, resume instead of reinitializing
+        if self.controller.state.is_running and self.controller.state.is_paused:
+            Logger.log("ResearchSimulationPage: resuming paused simulation (not reinitializing)")
+            self.controller.state.is_paused = False
+            self._pause_btn.configure(text="Pause", bg="#8a7e3b")
+            self._run_core_v2_step()
+            return
+
+        # If already running (not paused), ignore duplicate start
+        if self.controller.state.is_running:
+            return
+
         adapter = self.controller.state.loaded_network
 
         # Validate adapter type
@@ -7164,57 +7465,64 @@ class ResearchSimulationPage(TkinterView):
             messagebox.showerror("Error", "Legacy adapter detected. Core V2 required.")
             return
 
-        # Get parameters from GUI
+        # Get parameters from GUI (in experimental units)
         try:
-            plasmin_conc = float(self.plasmin_concentration.get())
-            dt = float(self.time_step.get())
-            max_time = float(self.max_time.get())
-            strain = float(self.applied_strain_fixed.get())
+            plasmin_conc = float(self.plasmin_concentration.get())  # µg/mL
+            dt_ms = float(self.time_step.get())  # ms
+            max_time_min = float(self.max_time.get())  # min
+            strain_pct = float(self.applied_strain_fixed.get())  # %
         except ValueError as e:
             messagebox.showerror("Error", f"Invalid parameter: {e}")
             return
 
-        # Validate parameter bounds (prevent numerical instability)
-        if dt <= 0 or dt > 0.1:
+        # Validate parameter bounds (in experimental units)
+        if dt_ms <= 0 or dt_ms > 100:
             messagebox.showerror(
                 "Invalid Time Step",
-                "Time step must be in (0, 0.1] seconds.\n\n"
-                "Values >0.1s cause force singularities due to large position updates.\n"
-                "Recommended: 0.01s for typical networks, 0.001s for high-strain cases."
+                "Time step must be in (0, 100] ms.\n\n"
+                "Values >100 ms cause force singularities.\n"
+                "Recommended: 10 ms for typical networks, 1 ms for high-strain cases."
             )
             return
 
         if plasmin_conc < 0.01 or plasmin_conc > 100:
             messagebox.showerror(
                 "Invalid Plasmin Concentration",
-                "Plasmin concentration should be in [0.01, 100].\n\n"
+                "Plasmin concentration should be in [0.01, 100] µg/mL.\n\n"
                 "Values <0.01 result in extremely slow degradation.\n"
-                "Values >100 may cause numerical issues in chemistry solver."
+                "Values >100 may cause numerical issues."
             )
             return
 
-        if strain < 0 or strain > 2.0:
+        if strain_pct < 0 or strain_pct > 200:
             messagebox.showerror(
                 "Invalid Applied Strain",
-                "Applied strain should be in [0, 2.0] (0-200%).\n\n"
+                "Applied strain should be in [0, 200]%.\n\n"
                 "Negative strain is non-physical.\n"
-                "Strain >200% exceeds WLC model validity range."
+                "Strain >200% exceeds WLC/eWLC model validity.\n"
+                "For high-strain work, use eWLC (Extended) force model."
             )
             return
 
-        if max_time <= 0:
+        if max_time_min <= 0:
             messagebox.showerror(
                 "Invalid Max Time",
-                "Max time must be positive."
+                "Max time must be positive (in minutes)."
             )
             return
 
+        # Convert to SI units for internal calculations
+        from src.config.units import Units
+        strain = strain_pct * Units.PERCENT_TO_STRAIN
+        dt = dt_ms * Units.MS_TO_S
+        max_time = max_time_min * Units.MIN_TO_S
+
         # Soft warnings for unusual (but valid) parameters
-        if dt < 0.001:
+        if dt_ms < 1:
             result = messagebox.askyesno(
                 "Very Small Timestep",
-                f"Timestep dt={dt}s is very small and may slow simulation.\n"
-                f"Typical value: 0.01s. Continue anyway?"
+                f"Timestep {dt_ms:.1f} ms is very small and may slow simulation.\n"
+                f"Typical value: 10 ms. Continue anyway?"
             )
             if not result:
                 return
@@ -7222,16 +7530,16 @@ class ResearchSimulationPage(TkinterView):
         if plasmin_conc > 10:
             result = messagebox.askyesno(
                 "High Plasmin Concentration",
-                f"Plasmin concentration={plasmin_conc} is very high and may cause rapid lysis.\n"
+                f"Plasmin concentration {plasmin_conc:.1f} µg/mL may cause rapid lysis.\n"
                 f"Continue anyway?"
             )
             if not result:
                 return
 
-        if strain > 0.5:
+        if strain_pct > 50:
             result = messagebox.askyesno(
                 "High Strain Warning",
-                f"Applied strain={strain*100:.0f}% is high and may cause numerical issues.\n"
+                f"Applied strain {strain_pct:.0f}% is high and may cause numerical issues.\n"
                 f"Monitor force metrics closely. Continue anyway?"
             )
             if not result:
@@ -7241,6 +7549,68 @@ class ResearchSimulationPage(TkinterView):
         mode_text = self.strain_mode_var.get()
         strain_mode = "affine" if "Affine" in mode_text else "boundary_only"
 
+        # Resolve force model from dropdown
+        force_model_text = self.force_model_var.get()
+        force_model = "ewlc" if "eWLC" in force_model_text else "wlc"
+
+        # Resolve chemistry mode and ABM parameters
+        chem_mode_text = self.chemistry_mode_var.get()
+        chemistry_mode = "abm" if "ABM" in chem_mode_text else "mean_field"
+
+        abm_params = None
+        if chemistry_mode == "abm":
+            try:
+                n_agents_str = self.abm_n_agents.get().strip()
+                # Map strain-cleavage model dropdown to key
+                sc_model_map = {
+                    "Exponential": "exponential",
+                    "Linear": "linear",
+                    "Constant": "constant",
+                }
+                sc_model_text = self.abm_strain_cleavage_model.get()
+                sc_model_key = sc_model_map.get(sc_model_text, "exponential")
+
+                abm_params = {
+                    'auto_agent_count': n_agents_str.lower() == 'auto',
+                    'n_agents': int(n_agents_str) if n_agents_str.lower() != 'auto' else 10,
+                    'plasmin_concentration_nM': plasmin_conc * 11.46,  # µg/mL -> nM approx
+                    'k_on2': float(self.abm_k_on2.get()),
+                    'alpha_on': float(self.abm_alpha_on.get()),
+                    'k_off0': float(self.abm_k_off0.get()),
+                    'delta_off': float(self.abm_delta_off.get()) * 1e-9,  # nm -> m
+                    'k_cat0': float(self.abm_k_cat0.get()),
+                    'beta_cat': float(self.abm_beta_cat.get()),
+                    'p_stay': float(self.abm_p_stay.get()),
+                    'strain_dependent_k_on': self.abm_strain_dep_kon.get(),
+                    'strain_dependent_k_off': self.abm_strain_dep_koff.get(),
+                    'update_kcat_dynamic': self.abm_update_kcat_dynamic.get(),
+                    'strain_cleavage_model': sc_model_key,
+                }
+            except ValueError as e:
+                messagebox.showerror("ABM Parameter Error", f"Invalid ABM parameter: {e}")
+                return
+
+        # Resolve mechanochemical coupling mode
+        mech_mode_text = self.strain_cleavage_mode_var.get()
+        if "Neutral" in mech_mode_text:
+            strain_cleavage_mode = "neutral"
+        elif "Biphasic" in mech_mode_text:
+            strain_cleavage_mode = "biphasic"
+        else:
+            strain_cleavage_mode = "inhibitory"
+
+        gamma_biphasic = 1.15
+        eps_star = 0.22
+        if strain_cleavage_mode == "biphasic":
+            try:
+                gamma_biphasic = float(self.biphasic_gamma.get())
+                eps_star = float(self.biphasic_eps_star.get()) / 100.0  # percent to fraction
+            except ValueError:
+                messagebox.showerror("Biphasic Parameter Error",
+                                     "Invalid γ or ε* value. Using defaults.")
+                gamma_biphasic = 1.15
+                eps_star = 0.22
+
         # Configure and start Core V2
         try:
             adapter.configure_parameters(
@@ -7248,12 +7618,46 @@ class ResearchSimulationPage(TkinterView):
                 time_step=dt,
                 max_time=max_time,
                 applied_strain=strain,
-                strain_mode=strain_mode
+                strain_mode=strain_mode,
+                force_model=force_model,
+                chemistry_mode=chemistry_mode,
+                abm_params=abm_params,
+                strain_cleavage_mode=strain_cleavage_mode,
+                gamma_biphasic=gamma_biphasic,
+                eps_star=eps_star,
             )
             adapter.start_simulation()
 
             self.controller.state.is_running = True
             self.controller.state.is_paused = False
+            self._pause_btn.configure(text="Pause", bg="#8a7e3b")
+
+            # Cache initial network state for fixed reference frame and ghost dots
+            render_data = adapter.get_render_data()
+            if render_data['nodes']:
+                nodes = render_data['nodes']
+                xs = [pos[0] for pos in nodes.values()]
+                ys = [pos[1] for pos in nodes.values()]
+                margin = 0.05  # 5% margin for node movement after fiber rupture
+                x_min, x_max = min(xs), max(xs)
+                y_min, y_max = min(ys), max(ys)
+                x_span = x_max - x_min
+                y_span = y_max - y_min
+                self._sim_initial_bounds = (
+                    x_min - margin * x_span,
+                    y_min - margin * y_span,
+                    x_max + margin * x_span,
+                    y_max + margin * y_span
+                )
+                # Save initial node positions for ghost dot overlay
+                self._sim_initial_nodes = dict(nodes)
+            else:
+                self._sim_initial_bounds = None
+                self._sim_initial_nodes = None
+
+            # Invalidate canvas cache for fresh simulation
+            self._invalidate_canvas_cache()
+            self._render_frame_counter = 0
 
             # Start non-blocking loop
             self._run_core_v2_step()
@@ -7321,16 +7725,14 @@ class ResearchSimulationPage(TkinterView):
                         msg_lines.append(f"aftermath with disconnected components.")
 
                     messagebox.showinfo("Simulation Complete", "\n".join(msg_lines))
-
-                    if reason == "network_cleared":
-                        try:
-                            self._render_relaxed_core_v2_network()
-                        except Exception:
-                            pass
+                    self._render_core_v2_network()
                     return
 
-            # Update GUI
-            self._render_core_v2_network()
+            # Update GUI (throttled: render every Nth frame for performance)
+            self._render_frame_counter += 1
+            if self._render_frame_counter >= self._render_skip:
+                self._render_frame_counter = 0
+                self._render_core_v2_network()
             self._update_core_v2_metrics()
 
             # Auto-pause on force spike check
@@ -7359,9 +7761,11 @@ class ResearchSimulationPage(TkinterView):
             messagebox.showerror("Simulation Error", f"Simulation stopped due to error:\n\n{str(e)}")
             return
 
-        # Schedule next frame with enough delay for Tkinter to process UI events
+        # Adaptive frame timing: subtract elapsed time from target interval
+        elapsed_ms = (_time.perf_counter() - frame_start) * 1000
+        delay = max(16, 80 - int(elapsed_ms))
         if self._viz_canvas and self._viz_canvas.winfo_exists():
-            self._viz_canvas.after(80, self._run_core_v2_step)
+            self._viz_canvas.after(delay, self._run_core_v2_step)
 
     def _compute_strain_color(self, strain: float) -> str:
         """
@@ -7523,8 +7927,71 @@ class ResearchSimulationPage(TkinterView):
             )
             y_offset += 16
 
+    def _compute_network_transform(self, nodes, bbox):
+        """
+        Compute coordinate transform from network space to canvas bbox.
+        Centers the network within the panel and uses fixed reference frame
+        during simulation.
+        """
+        x0, y0, x1, y1 = bbox
+        canvas_w = x1 - x0
+        canvas_h = y1 - y0
+
+        # Reserve space for title at top
+        title_h = 25
+        y0 = y0 + title_h
+        canvas_h = canvas_h - title_h
+
+        # Use cached initial bounds during simulation (fixed reference frame)
+        if self._sim_initial_bounds is not None:
+            net_x_min, net_y_min, net_x_max, net_y_max = self._sim_initial_bounds
+            x_min, x_max = net_x_min, net_x_max
+            y_min, y_max = net_y_min, net_y_max
+        else:
+            xs = [pos[0] for pos in nodes.values()]
+            ys = [pos[1] for pos in nodes.values()]
+            if not xs or not ys:
+                return None
+            x_min, x_max = min(xs), max(xs)
+            y_min, y_max = min(ys), max(ys)
+
+        x_span = x_max - x_min
+        y_span = y_max - y_min
+
+        # Handle degenerate networks (all nodes collinear)
+        if x_span == 0 or y_span == 0:
+            x_span = x_span if x_span > 0 else 1.0
+            y_span = y_span if y_span > 0 else 1.0
+
+        padding = 10
+        scale_x = (canvas_w - 2*padding) / x_span
+        scale_y = (canvas_h - 2*padding) / y_span
+        scale = min(scale_x, scale_y)
+
+        # Center the network within the panel
+        rendered_w = x_span * scale
+        rendered_h = y_span * scale
+        offset_x = x0 + padding + (canvas_w - 2*padding - rendered_w) / 2
+        offset_y = y0 + padding + (canvas_h - 2*padding - rendered_h) / 2
+
+        def to_canvas(x, y):
+            cx = offset_x + (x - x_min) * scale
+            cy = offset_y + rendered_h - (y - y_min) * scale
+            return cx, cy
+
+        return to_canvas
+
+    def _invalidate_canvas_cache(self):
+        """Force full canvas rebuild on next render (topology change, resize, etc.)."""
+        self._canvas_cache = {}
+        self._canvas_topology_hash = None
+
     def _render_core_v2_network(self):
-        """Render network from Core V2 render data."""
+        """Render dual network visualization: strain heatmap + geometric rearrangement.
+
+        Uses incremental canvas updates when topology is unchanged: coords() + itemconfig()
+        instead of delete + create. Full rebuild only on topology change or first render.
+        """
         if self._viz_canvas is None:
             return
 
@@ -7533,21 +8000,8 @@ class ResearchSimulationPage(TkinterView):
             return
 
         render_data = adapter.get_render_data()
-        nodes = render_data['nodes']
-        edges = render_data['edges']
-        strains = render_data.get('strains', {})
-        forces = render_data.get('forces', {})
-        integrity = render_data.get('integrity', {})
-        critical_fiber_id = render_data.get('critical_fiber_id', None)
-        plasmin_locations = render_data.get('plasmin_locations', {})
-        mean_integrity = render_data.get('mean_integrity', 1.0)
-        n_partially_degraded = render_data.get('n_partially_degraded', 0)
-        n_cleavage_events = render_data.get('n_cleavage_events', 0)
-
-        force_values = [abs(float(f)) for f in forces.values() if f is not None]
-        max_force = max(force_values) if force_values else 0.0
-
-        self._viz_canvas.delete("network")
+        if not render_data['nodes']:
+            return
 
         canvas_width = self._viz_canvas.winfo_width()
         canvas_height = self._viz_canvas.winfo_height()
@@ -7555,34 +8009,97 @@ class ResearchSimulationPage(TkinterView):
         if canvas_width <= 1 or canvas_height <= 1:
             return
 
-        # Compute bounding box
-        if not nodes:
-            print("[Core V2 Render] WARNING: No nodes to render")
+        # Detect topology change: edge count + set of edge IDs
+        edge_ids = tuple(e[0] for e in render_data['edges'])
+        topo_hash = (len(edge_ids), hash(edge_ids), canvas_width, canvas_height)
+        needs_full_rebuild = (topo_hash != self._canvas_topology_hash or not self._canvas_cache)
+
+        if needs_full_rebuild:
+            self._viz_canvas.delete("network")
+            self._canvas_cache = {}
+            self._canvas_topology_hash = topo_hash
+
+        divider_x = canvas_width // 2
+        left_bbox = (0, 0, divider_x - 5, canvas_height)
+        right_bbox = (divider_x + 5, 0, canvas_width, canvas_height)
+
+        self._render_strain_panel(left_bbox, render_data, needs_full_rebuild)
+        self._render_geometry_panel(right_bbox, render_data, needs_full_rebuild)
+
+        if needs_full_rebuild:
+            self._canvas_cache['divider'] = self._viz_canvas.create_line(
+                divider_x, 0, divider_x, canvas_height,
+                fill="#444444", width=2, tags="network"
+            )
+        else:
+            did = self._canvas_cache.get('divider')
+            if did:
+                self._viz_canvas.coords(did, divider_x, 0, divider_x, canvas_height)
+
+        # Stats overlay (bottom of canvas) - shows degradation progress
+        n_ruptured = len(render_data.get('ruptured_edges', []))
+        n_intact = len(render_data.get('intact_edges', []))
+        n_total = n_ruptured + n_intact
+        n_partially = render_data.get('n_partially_degraded', 0)
+        n_events = render_data.get('n_cleavage_events', 0)
+        mean_S = render_data.get('mean_integrity', 1.0)
+
+        # Build stats string — include ABM agent info when active
+        abm_stats = render_data.get('abm_statistics')
+        if abm_stats:
+            stats_text = (
+                f"Fibers: {n_intact}/{n_total}  |  Splits: {abm_stats.get('total_splits', 0)}  |  "
+                f"Agents: {abm_stats.get('bound', 0)} bound / {abm_stats.get('free', 0)} free "
+                f"/ {abm_stats.get('total', 0)} total  |  "
+                f"Bindings: {abm_stats.get('total_bindings', 0)}  |  "
+                f"Cleavages: {abm_stats.get('total_cleavages', 0)}"
+            )
+        else:
+            stats_text = (
+                f"Fibers: {n_intact} intact / {n_partially} degrading / {n_ruptured} ruptured  |  "
+                f"Cleavage events: {n_events}  |  Mean integrity: {mean_S:.2f}"
+            )
+
+        sid = self._canvas_cache.get('stats_text')
+        if sid and not needs_full_rebuild:
+            self._viz_canvas.coords(sid, 10, canvas_height - 12)
+            self._viz_canvas.itemconfig(sid, text=stats_text)
+        else:
+            self._canvas_cache['stats_text'] = self._viz_canvas.create_text(
+                10, canvas_height - 12,
+                text=stats_text, anchor="w", fill="#999999",
+                font=("Consolas", 9), tags="network"
+            )
+
+    def _render_strain_panel(self, bbox, data, needs_full_rebuild=True):
+        """Render strain heatmap (left panel) with canvas item caching."""
+        nodes = data['nodes']
+        edges = data['edges']
+        strains = data.get('strains', {})
+        forces = data.get('forces', {})
+        integrity = data.get('integrity', {})
+        diameters = data.get('diameters', {})
+        critical_fiber_id = data.get('critical_fiber_id', None)
+        plasmin_locations = data.get('plasmin_locations', {})
+
+        force_values = [abs(float(f)) for f in forces.values() if f is not None]
+        max_force = max(force_values) if force_values else 0.0
+
+        to_canvas = self._compute_network_transform(nodes, bbox)
+        if to_canvas is None:
             return
 
-        xs = [pos[0] for pos in nodes.values()]
-        ys = [pos[1] for pos in nodes.values()]
-        x_min, x_max = min(xs), max(xs)
-        y_min, y_max = min(ys), max(ys)
+        cache = self._canvas_cache
+        strain_lines = cache.setdefault('strain_lines', {})
+        strain_nodes = cache.setdefault('strain_nodes', {})
 
-        x_span = x_max - x_min
-        y_span = y_max - y_min
+        if needs_full_rebuild:
+            cache['strain_label'] = self._viz_canvas.create_text(
+                bbox[0] + 10, bbox[1] + 10,
+                text="Strain State", anchor="nw",
+                font=("Consolas", 11, "bold"), fill="#CCCCCC", tags="network"
+            )
 
-        if x_span == 0 or y_span == 0:
-            return
-
-        # Scale to canvas (with padding)
-        padding = 40
-        scale_x = (canvas_width - 2*padding) / x_span
-        scale_y = (canvas_height - 2*padding) / y_span
-        scale = min(scale_x, scale_y)
-
-        def to_canvas(x, y):
-            cx = padding + (x - x_min) * scale
-            cy = canvas_height - (padding + (y - y_min) * scale)
-            return cx, cy
-
-        # Draw edges
         for edge_id, n_from, n_to, is_ruptured in edges:
             if n_from not in nodes or n_to not in nodes:
                 continue
@@ -7597,12 +8114,11 @@ class ResearchSimulationPage(TkinterView):
             is_critical = (critical_fiber_id is not None and edge_id == critical_fiber_id)
 
             # Color by tension gradient + width by integrity (degradation)
-            dash_pattern = None
+            dash_pattern = ()
             fiber_S = integrity.get(edge_id, 1.0)  # Fiber integrity [0, 1]
             if is_critical:
                 color = "#FF00FF"  # Magenta (critical fiber) - highest priority
                 width = 6  # Extra thick
-                dash_pattern = None  # Solid for emphasis
             elif is_ruptured:
                 color = "#FF4444"  # Red (ruptured) - dashed to show cleavage
                 width = 1
@@ -7616,23 +8132,84 @@ class ResearchSimulationPage(TkinterView):
                     # Fall back to strain-based coloring
                     strain = strains.get(edge_id, 0.0)
                     color = self._compute_strain_color(strain)
-                # Width encodes fiber integrity: thicker = intact, thinner = degraded
-                # S=1.0 → width 4, S=0.5 → width 2, S=0.1 → width 1
-                base_width = max(1, int(4 * fiber_S))
-                # Plasmin-active fibers get +1 width
+                fiber_d = diameters.get(edge_id, 130.0)
+                base_width = max(1, int(fiber_d / 65.0 * fiber_S))
                 width = base_width + (1 if has_plasmin else 0)
-                # Partially degraded fibers get a subtle dash pattern
                 if fiber_S < 1.0:
                     dash_pattern = (int(8 * fiber_S) + 2, 2)
 
-            line_kwargs = dict(fill=color, width=width, tags="network")
-            if dash_pattern:
-                line_kwargs["dash"] = dash_pattern
-            self._viz_canvas.create_line(x1, y1, x2, y2, **line_kwargs)
+            cached_id = strain_lines.get(edge_id)
+            if cached_id is not None and not needs_full_rebuild:
+                self._viz_canvas.coords(cached_id, x1, y1, x2, y2)
+                self._viz_canvas.itemconfig(cached_id, fill=color, width=width, dash=dash_pattern)
+            else:
+                line_kwargs = dict(fill=color, width=width, tags="network", smooth=True)
+                if dash_pattern:
+                    line_kwargs["dash"] = dash_pattern
+                strain_lines[edge_id] = self._viz_canvas.create_line(x1, y1, x2, y2, **line_kwargs)
 
-        # Draw plasmin dots (green dots showing enzyme locations)
-        if plasmin_locations:
-            # Build O(1) edge lookup to avoid O(P*E) nested loop
+        # ABM agent and plasmin visualization: always delete+recreate (dynamic count)
+        self._viz_canvas.delete("network_agents")
+        self._viz_canvas.delete("network_legend")
+
+        abm_agents = data.get('abm_agent_locations')
+        if abm_agents:
+            edge_endpoints = {eid: (nf, nt) for eid, nf, nt, _ in edges}
+            # Bound agents: green dots on fibers at their position
+            for fiber_id, position_s, agent_id in abm_agents.get('bound', []):
+                ep = edge_endpoints.get(fiber_id)
+                if ep and ep[0] in nodes and ep[1] in nodes:
+                    x1, y1 = to_canvas(*nodes[ep[0]])
+                    x2, y2 = to_canvas(*nodes[ep[1]])
+                    px = x1 + position_s * (x2 - x1)
+                    py = y1 + position_s * (y2 - y1)
+                    self._viz_canvas.create_oval(
+                        px - 6, py - 6, px + 6, py + 6,
+                        fill="#00FF00", outline="#00CC00", width=2, tags=("network", "network_agents")
+                    )
+            # Unbound agents: yellow dots at nodes
+            for node_id, agent_id in abm_agents.get('unbound', []):
+                if node_id in nodes:
+                    cx, cy = to_canvas(*nodes[node_id])
+                    self._viz_canvas.create_oval(
+                        cx - 4, cy - 4, cx + 4, cy + 4,
+                        fill="#FFFF00", outline="#CCCC00", width=1, tags=("network", "network_agents")
+                    )
+            # Cooldown agents: orange dots at nodes
+            for node_id, agent_id in abm_agents.get('cooldown', []):
+                if node_id in nodes:
+                    cx, cy = to_canvas(*nodes[node_id])
+                    self._viz_canvas.create_oval(
+                        cx - 4, cy - 4, cx + 4, cy + 4,
+                        fill="#FF8800", outline="#CC6600", width=1, tags=("network", "network_agents")
+                    )
+            # ABM legend in top-right corner of strain panel
+            lx2 = bbox[2] - 10
+            lx1 = bbox[2] - 150
+            ly1 = bbox[1] + 10
+            ly2 = bbox[1] + 65
+            self._viz_canvas.create_rectangle(
+                lx1, ly1, lx2, ly2,
+                fill="#1a1a1a", outline="#555555", width=1,
+                tags=("network", "network_legend")
+            )
+            legend_items = [
+                ("#00FF00", "Bound plasmin"),
+                ("#FFFF00", "Unbound plasmin"),
+                ("#FF8800", "Cooldown"),
+            ]
+            for i, (dot_color, label) in enumerate(legend_items):
+                cy = ly1 + 13 + i * 16
+                self._viz_canvas.create_oval(
+                    lx1 + 8, cy - 4, lx1 + 16, cy + 4,
+                    fill=dot_color, outline="", tags=("network", "network_legend")
+                )
+                self._viz_canvas.create_text(
+                    lx1 + 22, cy, text=label, anchor="w", fill="#cccccc",
+                    font=("Consolas", 8), tags=("network", "network_legend")
+                )
+        elif plasmin_locations:
+            # Mean-field plasmin dots (existing behavior)
             edge_endpoints = {eid: (nf, nt) for eid, nf, nt, _ in edges}
             for fiber_id, position in plasmin_locations.items():
                 edge_info = edge_endpoints.get(fiber_id)
@@ -7644,69 +8221,104 @@ class ResearchSimulationPage(TkinterView):
                     py = y1 + position * (y2 - y1)
                     self._viz_canvas.create_oval(
                         px - 5, py - 5, px + 5, py + 5,
-                        fill="#00FF00", outline="#00AA00", width=1, tags="network"
+                        fill="#00FF00", outline="#00AA00", width=1, tags=("network", "network_agents")
                     )
 
-        # Draw nodes
         for node_id, (x, y) in nodes.items():
             cx, cy = to_canvas(x, y)
-            self._viz_canvas.create_oval(
-                cx-3, cy-3, cx+3, cy+3,
-                fill="#CCCCCC",
-                outline="",
-                tags="network"
+            cached_id = strain_nodes.get(node_id)
+            if cached_id is not None and not needs_full_rebuild:
+                self._viz_canvas.coords(cached_id, cx-3, cy-3, cx+3, cy+3)
+            else:
+                strain_nodes[node_id] = self._viz_canvas.create_oval(
+                    cx-3, cy-3, cx+3, cy+3,
+                    fill="#CCCCCC", outline="", tags="network"
+                )
+
+    def _render_geometry_panel(self, bbox, data, needs_full_rebuild=True):
+        """Render geometric rearrangement (right panel) with ghost dots and caching."""
+        nodes = data['nodes']
+        edges = data['edges']
+
+        to_canvas = self._compute_network_transform(nodes, bbox)
+        if to_canvas is None:
+            return
+
+        cache = self._canvas_cache
+        geo_ghost_lines = cache.setdefault('geo_ghost_lines', {})
+        geo_lines = cache.setdefault('geo_lines', {})
+        geo_ghost_nodes = cache.setdefault('geo_ghost_nodes', {})
+        geo_nodes = cache.setdefault('geo_nodes', {})
+
+        if needs_full_rebuild:
+            cache['geo_label'] = self._viz_canvas.create_text(
+                bbox[0] + 10, bbox[1] + 10,
+                text="Relaxed Geometry", anchor="nw",
+                font=("Consolas", 11, "bold"), fill="#CCCCCC", tags="network"
             )
 
-        # Draw legends only when simulation is not running (they are static and expensive)
-        is_running = self.controller.state.is_running and not self.controller.state.is_paused
-        if not is_running:
-            if max_force > 0:
-                self._draw_color_legend(canvas_width - 60, 50)
-            self._draw_degradation_legend(canvas_width - 140, 240)
+        # Draw ghost edges at initial positions (dim, to show deformation)
+        if self._sim_initial_nodes:
+            for edge_id, n_from, n_to, is_ruptured in edges:
+                if n_from not in self._sim_initial_nodes or n_to not in self._sim_initial_nodes:
+                    continue
+                gx1, gy1 = to_canvas(*self._sim_initial_nodes[n_from])
+                gx2, gy2 = to_canvas(*self._sim_initial_nodes[n_to])
+                cached_id = geo_ghost_lines.get(edge_id)
+                if cached_id is not None and not needs_full_rebuild:
+                    self._viz_canvas.coords(cached_id, gx1, gy1, gx2, gy2)
+                else:
+                    geo_ghost_lines[edge_id] = self._viz_canvas.create_line(
+                        gx1, gy1, gx2, gy2,
+                        fill="#333333", width=1, tags="network"
+                    )
 
-        # Fiber count overlay (bottom-left)
-        n_ruptured = sum(1 for _, _, _, rupt in edges if rupt)
-        n_total = len(edges)
-        n_active = n_total - n_ruptured
-        overlay_text = f"Active: {n_active}  |  Degrading: {n_partially_degraded}  |  Cleaved: {n_ruptured}  |  Total: {n_total}"
-        self._viz_canvas.create_text(
-            padding, canvas_height - 12,
-            text=overlay_text, anchor="w", fill="#cccccc",
-            font=("Consolas", 10), tags="network"
-        )
+        # Draw current intact edges
+        for edge_id, n_from, n_to, is_ruptured in edges:
+            if n_from not in nodes or n_to not in nodes:
+                continue
 
-        # Degradation stats overlay (bottom-left, second line)
-        deg_text = f"Mean Integrity: {mean_integrity:.1%}  |  Cleavage Events: {n_cleavage_events}  |  λ₀={adapter.lambda_0:.1f}"
-        self._viz_canvas.create_text(
-            padding, canvas_height - 28,
-            text=deg_text, anchor="w", fill="#aabb99",
-            font=("Consolas", 9), tags="network"
-        )
+            cached_id = geo_lines.get(edge_id)
+            if is_ruptured:
+                # Hide ruptured edge if it was cached
+                if cached_id is not None and not needs_full_rebuild:
+                    self._viz_canvas.coords(cached_id, 0, 0, 0, 0)
+                continue
 
-        # Time and lysis overlay (top-left)
-        t = adapter.get_current_time() if adapter.simulation else 0.0
-        lysis = adapter.get_lysis_fraction() if adapter.simulation else 0.0
-        time_text = f"t = {t:.2f}s  |  Lysis: {lysis:.1%}"
-        self._viz_canvas.create_text(
-            padding, 15,
-            text=time_text, anchor="w", fill="#aaaaaa",
-            font=("Consolas", 10), tags="network"
-        )
+            x1, y1 = to_canvas(*nodes[n_from])
+            x2, y2 = to_canvas(*nodes[n_to])
+            if cached_id is not None and not needs_full_rebuild:
+                self._viz_canvas.coords(cached_id, x1, y1, x2, y2)
+            else:
+                geo_lines[edge_id] = self._viz_canvas.create_line(
+                    x1, y1, x2, y2,
+                    fill="#FFFFFF", width=2, tags="network", smooth=True
+                )
 
-        # Percolation annotation if network cleared
-        if critical_fiber_id is not None and adapter.simulation and adapter.simulation.state.clearance_event:
-            event = adapter.simulation.state.clearance_event
-            percolation_text = (
-                f"PERCOLATION LOST at t={event['time']:.2f}s\n"
-                f"Critical fiber: #{event['critical_fiber_id']}\n"
-                f"Lysis at clearance: {event['lysis_fraction']:.1%}\n"
-                f"Fibers cleaved: {event['cleaved_fibers']}/{event['total_fibers']}"
-            )
-            self._viz_canvas.create_text(
-                canvas_width // 2, 20,
-                text=percolation_text, anchor="n", fill="#ff88ff",
-                font=("Consolas", 10, "bold"), tags="network", justify="center"
-            )
+        # Draw ghost dots at initial positions (dim yellow, showing where nodes started)
+        if self._sim_initial_nodes:
+            for node_id, (gx, gy) in self._sim_initial_nodes.items():
+                cx, cy = to_canvas(gx, gy)
+                cached_id = geo_ghost_nodes.get(node_id)
+                if cached_id is not None and not needs_full_rebuild:
+                    self._viz_canvas.coords(cached_id, cx-2, cy-2, cx+2, cy+2)
+                else:
+                    geo_ghost_nodes[node_id] = self._viz_canvas.create_oval(
+                        cx-2, cy-2, cx+2, cy+2,
+                        fill="#555522", outline="", tags="network"
+                    )
+
+        # Draw current node positions (bright, on top)
+        for node_id, (x, y) in nodes.items():
+            cx, cy = to_canvas(x, y)
+            cached_id = geo_nodes.get(node_id)
+            if cached_id is not None and not needs_full_rebuild:
+                self._viz_canvas.coords(cached_id, cx-4, cy-4, cx+4, cy+4)
+            else:
+                geo_nodes[node_id] = self._viz_canvas.create_oval(
+                    cx-4, cy-4, cx+4, cy+4,
+                    fill="#CCCCCC", outline="#FFFFFF", tags="network"
+                )
 
     def _render_relaxed_core_v2_network(self):
         """Render mechanically relaxed network after percolation loss (Core V2)."""
@@ -8006,22 +8618,26 @@ class ResearchSimulationPage(TkinterView):
             pass
 
     def _on_pause(self):
-        """Core V2: Pause simulation."""
-        Logger.log("ResearchSimulationPage: pause (Core V2)")
+        """Core V2: Toggle pause/resume."""
         if not self.controller.state.is_running:
             return
 
-        self.controller.state.is_paused = True
-        self._update_core_v2_metrics()
+        if self.controller.state.is_paused:
+            # Resume
+            Logger.log("ResearchSimulationPage: resume (Core V2)")
+            self.controller.state.is_paused = False
+            self._pause_btn.configure(text="Pause", bg="#8a7e3b")
+            self._run_core_v2_step()
+        else:
+            # Pause
+            Logger.log("ResearchSimulationPage: pause (Core V2)")
+            self.controller.state.is_paused = True
+            self._pause_btn.configure(text="Resume", bg="#2d6a8f")
+            self._update_core_v2_metrics()
 
     def _on_resume(self):
-        """Core V2: Resume simulation."""
-        Logger.log("ResearchSimulationPage: resume (Core V2)")
-        if not self.controller.state.is_running:
-            return
-
-        self.controller.state.is_paused = False
-        self._run_core_v2_step()
+        """Core V2: Resume simulation (called by toggle)."""
+        self._on_pause()  # Delegate to toggle
 
     def _on_stop(self):
         """
@@ -8030,6 +8646,10 @@ class ResearchSimulationPage(TkinterView):
         """
         Logger.log("ResearchSimulationPage: stop (controller)")
         self.controller.stop()
+        self._pause_btn.configure(text="Pause", bg="#8a7e3b")
+        self._sim_initial_bounds = None  # Clear cached bounds
+        self._sim_initial_nodes = None  # Clear ghost dots
+        self._invalidate_canvas_cache()
         self._render_from_state()
 
     def _on_advance_one_batch(self):
@@ -8820,12 +9440,7 @@ class ResearchSimulationPage(TkinterView):
                 # Check visualization mode
                 viz_mode = self._viz_mode.get() if hasattr(self, '_viz_mode') else "strain"
 
-                if viz_mode == "relaxed":
-                    # Render relaxed network (post-percolation)
-                    self._render_relaxed_core_v2_network()
-                else:
-                    # Render strain heatmap (default)
-                    self._render_core_v2_network()
+                self._render_core_v2_network()
                 return
         except Exception as e:
             # If Core V2 import fails, continue with legacy rendering
@@ -9504,5 +10119,165 @@ class ResearchSimulationPage(TkinterView):
 
     def _format_paused_state(self):
         return "True" if bool(self.controller.state.is_paused) else "False"
+
+    # Generate Network dialog
+
+    def _on_generate_network(self):
+        """Open modal dialog to generate a new network and load it."""
+        dialog = tk.Toplevel(self.view.root)
+        dialog.title("Generate Network")
+        dialog.geometry("420x450")
+        dialog.configure(bg=self.BG_COLOR)
+        dialog.transient(self.view.root)
+        dialog.grab_set()
+
+        # Network type dropdown
+        tk.Label(dialog, text="Network Type", bg=self.BG_COLOR, fg=self.FG_COLOR,
+                 font=self.SUBHEADING_2_FONT).pack(anchor="w", padx=12, pady=(12, 2))
+        type_var = tk.StringVar(value="Triangular Lattice")
+        type_menu = tk.OptionMenu(dialog, type_var,
+                                  "Triangular Lattice", "Voronoi", "Hexagonal", "Rectangular Lattice")
+        type_menu.configure(bg="#2d2d3d", fg="#ffffff", highlightthickness=0)
+        type_menu.pack(fill=tk.X, padx=12, pady=(0, 8))
+
+        # Dynamic parameter frame
+        param_frame = tk.Frame(dialog, bg=self.BG_COLOR)
+        param_frame.pack(fill=tk.X, padx=12)
+
+        # Entry widgets (populated per type)
+        entries = {}
+
+        def _make_entry(parent, label, default):
+            row = tk.Frame(parent, bg=self.BG_COLOR)
+            row.pack(fill=tk.X, pady=2)
+            tk.Label(row, text=label, bg=self.BG_COLOR, fg=self.FG_COLOR, width=20,
+                     anchor="w").pack(side=tk.LEFT)
+            var = tk.StringVar(value=str(default))
+            tk.Entry(row, textvariable=var, bg="#2a2a3a", fg="#ffffff",
+                     insertbackground="#ffffff", width=12).pack(side=tk.LEFT)
+            return var
+
+        def _update_params(*_args):
+            for w in param_frame.winfo_children():
+                w.destroy()
+            entries.clear()
+
+            net_type = type_var.get()
+            if net_type == "Triangular Lattice":
+                entries['nx'] = _make_entry(param_frame, "Columns (nx)", 10)
+                entries['ny'] = _make_entry(param_frame, "Rows (ny)", 5)
+                entries['domain_x'] = _make_entry(param_frame, "Domain X", 100.0)
+                entries['domain_y'] = _make_entry(param_frame, "Domain Y", 40.0)
+            elif net_type == "Voronoi":
+                entries['n_points'] = _make_entry(param_frame, "Number of Points", 100)
+                entries['domain_x'] = _make_entry(param_frame, "Domain X", 100.0)
+                entries['domain_y'] = _make_entry(param_frame, "Domain Y", 40.0)
+                entries['max_edge_len'] = _make_entry(param_frame, "Max Edge Length", "auto")
+            elif net_type == "Hexagonal":
+                entries['rows'] = _make_entry(param_frame, "Rows", 8)
+                entries['cols'] = _make_entry(param_frame, "Columns", 15)
+                entries['spacing'] = _make_entry(param_frame, "Spacing", 5.0)
+            elif net_type == "Rectangular Lattice":
+                entries['rows'] = _make_entry(param_frame, "Rows", 6)
+                entries['cols'] = _make_entry(param_frame, "Columns", 10)
+                entries['spacing'] = _make_entry(param_frame, "Spacing", 10.0)
+
+        type_var.trace_add("write", _update_params)
+        _update_params()
+
+        # Seed
+        tk.Label(dialog, text="Seed", bg=self.BG_COLOR, fg=self.FG_COLOR,
+                 font=self.SUBHEADING_2_FONT).pack(anchor="w", padx=12, pady=(8, 2))
+        import random as _rand
+        seed_var = tk.StringVar(value=str(_rand.randint(1, 99999)))
+        tk.Entry(dialog, textvariable=seed_var, bg="#2a2a3a", fg="#ffffff",
+                 insertbackground="#ffffff", width=12).pack(anchor="w", padx=12)
+
+        # Thickness mode
+        thickness_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(dialog, text="Uniform thickness (default: log-normal)",
+                       variable=thickness_var, bg=self.BG_COLOR, fg=self.FG_COLOR,
+                       selectcolor="#2a2a3a", activebackground=self.BG_COLOR,
+                       activeforeground=self.FG_COLOR).pack(anchor="w", padx=12, pady=(8, 4))
+
+        # Generate & Load button
+        def _do_generate():
+            try:
+                import tempfile
+                sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                from tools.generate_network import (
+                    generate_triangular, generate_voronoi,
+                    generate_hexagonal, generate_lattice,
+                    assign_thickness, validate_network, export_stacked,
+                )
+
+                seed = int(seed_var.get())
+                net_type = type_var.get()
+
+                if net_type == "Triangular Lattice":
+                    nodes, edges = generate_triangular(
+                        int(entries['nx'].get()), int(entries['ny'].get()),
+                        float(entries['domain_x'].get()), float(entries['domain_y'].get()),
+                        seed=seed,
+                    )
+                elif net_type == "Voronoi":
+                    mel = entries['max_edge_len'].get()
+                    max_el = None if mel.lower() == 'auto' else float(mel)
+                    nodes, edges = generate_voronoi(
+                        int(entries['n_points'].get()),
+                        float(entries['domain_x'].get()), float(entries['domain_y'].get()),
+                        max_edge_len=max_el, seed=seed,
+                    )
+                elif net_type == "Hexagonal":
+                    nodes, edges = generate_hexagonal(
+                        int(entries['rows'].get()), int(entries['cols'].get()),
+                        float(entries['spacing'].get()),
+                    )
+                elif net_type == "Rectangular Lattice":
+                    nodes, edges = generate_lattice(
+                        int(entries['rows'].get()), int(entries['cols'].get()),
+                        float(entries['spacing'].get()),
+                    )
+                else:
+                    messagebox.showerror("Error", f"Unknown type: {net_type}")
+                    return
+
+                assign_thickness(edges, uniform=thickness_var.get(), seed=seed)
+
+                if not validate_network(nodes, edges):
+                    messagebox.showwarning("Warning", "Generated network failed validation")
+                    return
+
+                # Write to temp file
+                tmp_dir = tempfile.mkdtemp(prefix="fibrinet_gen_")
+                out_path = os.path.join(tmp_dir, "generated_network.xlsx")
+                export_stacked(nodes, edges, out_path)
+
+                # Load via existing pipeline
+                self.selected_network_path.set(out_path)
+                dialog.destroy()
+                self._on_load_network_stub()
+
+            except Exception as e:
+                messagebox.showerror("Generation Error", f"Failed:\n{str(e)}")
+                import traceback
+                traceback.print_exc()
+
+        btn_frame = tk.Frame(dialog, bg=self.BG_COLOR)
+        btn_frame.pack(fill=tk.X, padx=12, pady=(16, 12))
+
+        tk.Button(
+            btn_frame, text="Generate & Load", bg="#2d6a4f", fg="#ffffff",
+            activebackground="#3d7a5f", activeforeground="#ffffff",
+            borderwidth=0, cursor="hand2", command=_do_generate,
+            padx=16, pady=8,
+        ).pack(side=tk.LEFT)
+
+        tk.Button(
+            btn_frame, text="Cancel", bg="#4a3a3a", fg="#cccccc",
+            activebackground="#5a4a4a", activeforeground="#ffffff",
+            borderwidth=0, cursor="hand2", command=dialog.destroy,
+            padx=16, pady=8,
+        ).pack(side=tk.LEFT, padx=(8, 0))
 
 

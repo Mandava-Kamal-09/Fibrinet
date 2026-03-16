@@ -1,100 +1,64 @@
-"""
-FibriNet Core V2: Stochastic Mechanochemical Simulation Engine
-
-Simulates plasmin-mediated fibrinolysis under mechanical strain using:
-- Worm-Like Chain (WLC) mechanics via Marko-Siggia approximation
-- L-BFGS-B energy minimization with analytical Jacobian
-- Hybrid stochastic chemistry (Gillespie SSA + tau-leaping)
-- Strain-inhibited enzymatic cleavage model
-
-Key Equations:
-    WLC Force:  F(ε) = (k_B T / ξ) × [1/(4(1-ε)²) - 1/4 + ε]
-    WLC Energy: U(ε) = (k_B T L_c / ξ) × [1/(4(1-ε)) - 1/4 - ε/4 + ε²/2]
-    Cleavage:   k(ε) = λ₀ × k₀ × exp(-β × ε)   [plasmin-scaled, strain-inhibited lysis]
-
-References:
-    - Marko & Siggia (1995) - WLC force law
-    - Li et al. (2017) - Strain-inhibited fibrinolysis
-    - Adhikari et al. (2012) - Mechanosensitive degradation
-    - Cone et al. (2020) - Prestrain in fibrin networks
-"""
+"""FibriNet Core V2: WLC/eWLC mechanics, L-BFGS-B minimization, Gillespie SSA."""
 
 from dataclasses import dataclass, field, replace
 from typing import Dict, List, Tuple, Optional, Any
 import numpy as np
 import math
 from scipy.optimize import minimize
-from collections import defaultdict
+from collections import defaultdict, deque
 import random
 import hashlib
 import json
 
 
 class PhysicalConstants:
-    """
-    Physical constants in SI units.
-
-    All simulation equations use SI internally for numerical stability.
-    Unit conversion from abstract/experimental units is user responsibility.
-    """
-    # Boltzmann constant [J/K]
+    """Physical constants (SI units)."""
     k_B = 1.380649e-23
+    T = 310.15
+    k_B_T = k_B * T
+    xi = 1.0e-6
+    EWLC_K0 = 3.0e-8
+    k_cat_0 = 0.020  # Lynch et al. (2022): mean single-fiber cleavage time ≈ 49.8 s
+    beta_strain = 0.84  # Varjú et al. (2011) J Thromb Haemost
+    x_bell = 0.5e-9
+    PRESTRAIN = 0.23
+    PRESTRAIN_AMPLITUDE = 0.0
+    MAX_STRAIN = 0.99
+    CASCADE_RUPTURE_THRESHOLD = 0.30  # Strain threshold for mechanical rupture cascade (calibrated)
+    CASCADE_ENABLED = True  # Kill-switch: False → byte-for-byte identical to pre-cascade
+    FIBER_MEAN_DIAMETER_NM = 130.0    # Mean fiber diameter [nm] (Yeromonahos 2010)
+    FIBER_DIAMETER_CV = 0.5           # Coefficient of variation (lognormal)
+    FIBER_DIAMETER_REF_NM = 130.0     # Reference diameter for scaling [nm]
+    S_MIN_BELL = 0.05
+    MAX_BELL_EXPONENT = 100.0
+    F_MAX = 1e-6
+    # Three-regime constitutive model (kill-switch: False → WLC-only)
+    THREE_REGIME_ENABLED = False
 
-    # Temperature [K]
-    T = 310.15  # 37°C (physiological)
-
-    # Thermal energy [J]
-    k_B_T = k_B * T  # ≈ 4.28e-21 J
-
-    # WLC persistence length for fibrin [m]
-    # Literature range: 0.5-2 µm; use median
-    xi = 1.0e-6  # 1 µm
-
-    # Enzymatic cleavage parameters (strain-based inhibition)
-    k_cat_0 = 0.1    # Baseline cleavage rate [1/s] (plasmin on unstressed fibrin)
-    beta_strain = 10.0  # Strain mechanosensitivity (dimensionless)
-                       # β=10 → 10-fold reduction at ε=0.23 (Adhikari et al. 2012)
-
-    # Legacy Bell parameter (kept for compatibility, but not used in strain-based model)
-    x_bell = 0.5e-9  # Transition state distance [m]
-
-    # Polymerization prestrain (Cone et al. 2020)
-    # Fibers polymerize under ~23% tensile strain, providing initial network tension
-    PRESTRAIN = 0.23  # 23% initial strain (produces 35% more clearance via tension-driven mechanisms)
-
-    # Numerical stability guards
-    MAX_STRAIN = 0.99      # Prevent WLC singularity at ε=1
-    S_MIN_BELL = 0.05      # Floor for Bell stress denominator (prevents overflow)
-    MAX_BELL_EXPONENT = 100.0  # Cap exponential argument
-    F_MAX = 1e-6           # Force ceiling [N] (1 microNewton) - prevents numerical overflow
+    # Sigmoid blend constants (Maksudov 2021, Filla 2023)
+    SIGMOID_EPSILON_MID = 1.3      # Transition midpoint strain
+                                   # Free parameter — Maksudov 2021 range 1.3–1.6
+    SIGMOID_DELTA_EPSILON = 0.15   # Transition half-width
+                                   # Free parameter — Maksudov 2021 range 0.12–0.41
+    Y_A_STRONG = 6.5e6             # High-strain axial modulus [Pa] (Maksudov 2021 average)
+    RUPTURE_STRAIN = 2.8           # Mechanical rupture strain
+                                   # TODO: Maksudov 2021 reports ε*≈212% — verify
+                                   # exact figure/table before updating to 2.12
 
 
 PC = PhysicalConstants()
 
+# Gauss-Legendre quadrature nodes and weights on [-1, 1]
+# For energy integration of sigmoid-blended force when THREE_REGIME_ENABLED.
+# 16 points needed because the WLC cap at ε=0.995 creates a kink in the
+# integrand; 8 points gives ~1% error at that boundary, 16 is well under.
+_GL_NODES, _GL_WEIGHTS = np.polynomial.legendre.leggauss(16)
+_GL_N = len(_GL_NODES)
 
 
 @dataclass(frozen=True)
 class WLCFiber:
-    """
-    Worm-Like Chain fiber with spatially-resolved damage.
-
-    Immutable snapshot of fiber state at a given timestep.
-
-    Attributes:
-        fiber_id: Unique fiber identifier
-        node_i: Start node ID
-        node_j: End node ID
-        L_c: Contour length [m] (maximum extension)
-        xi: Persistence length [m]
-        S: Cross-sectional integrity [0, 1] (1 = intact, 0 = ruptured)
-        x_bell: Bell transition distance [m]
-        k_cat_0: Baseline cleavage rate [1/s]
-
-    Derived Quantities:
-        - Force: F(x) via WLC force law
-        - Energy: U(x) via WLC energy integral
-        - Bell rate: k(F, S) stress-dependent
-    """
+    """WLC/eWLC fiber with integrity S ∈ [0,1]."""
     fiber_id: int
     node_i: int
     node_j: int
@@ -103,92 +67,164 @@ class WLCFiber:
     S: float = 1.0  # Integrity [0, 1]
     x_bell: float = PC.x_bell
     k_cat_0: float = PC.k_cat_0
+    force_model: str = 'wlc'  # 'wlc' or 'ewlc'
+    K0: float = PC.EWLC_K0  # eWLC finite extensibility parameter [N]
+    diameter_nm: float = 130.0  # Fiber diameter [nm]
 
     def __post_init__(self):
-        """Validate physical constraints."""
         if self.L_c <= 0:
             raise ValueError(f"Fiber {self.fiber_id}: L_c must be > 0 (got {self.L_c})")
         if self.xi <= 0:
             raise ValueError(f"Fiber {self.fiber_id}: xi must be > 0 (got {self.xi})")
         if not (0 <= self.S <= 1):
             raise ValueError(f"Fiber {self.fiber_id}: S must be in [0, 1] (got {self.S})")
+        if self.force_model not in ('wlc', 'ewlc'):
+            raise ValueError(f"Fiber {self.fiber_id}: force_model must be 'wlc' or 'ewlc' (got {self.force_model})")
+        if self.K0 < 0:
+            raise ValueError(f"Fiber {self.fiber_id}: K0 must be >= 0 (got {self.K0})")
 
     @property
     def _k_B_T_Lc_over_xi(self) -> float:
-        """Energy prefactor: k_B T L_c / ξ [J]"""
         return PC.k_B_T * self.L_c / self.xi
 
     @property
     def _k_B_T_over_xi(self) -> float:
-        """Force prefactor: k_B T / ξ [N]"""
         return PC.k_B_T / self.xi
 
     def _safe_strain(self, x: float) -> float:
-        """Compute strain ε = (x - L_c)/L_c with singularity guard."""
-        strain = (x - self.L_c) / self.L_c
-        return min(strain, PC.MAX_STRAIN)
+        raw = (x - self.L_c) / self.L_c
+        if PC.THREE_REGIME_ENABLED:
+            return min(raw, PC.RUPTURE_STRAIN)
+        return min(raw, PC.MAX_STRAIN)
 
     def compute_force(self, x: float) -> float:
-        """
-        WLC force law (Marko-Siggia approximation).
+        """F_eff = S × F_model, sigmoid blend when THREE_REGIME_ENABLED.
 
-        F(ε) = (k_B T / ξ) × [1/(4(1-ε)²) - 1/4 + ε]
-        F_eff = S × F_wlc(ε)
-
-        Args:
-            x: Current extension [m]
-
-        Returns:
-            Effective force [N]
+        For x < L_c (compression), the WLC extrapolation gives negative (repulsive)
+        force. This provides essential structural stability in networks, preventing
+        cascade collapse when neighboring fibers are degraded.
         """
         strain = self._safe_strain(x)
-        one_minus_eps = 1.0 - strain
 
-        term1 = 1.0 / (4.0 * one_minus_eps**2)
-        term2 = -0.25
-        term3 = strain
+        if PC.THREE_REGIME_ENABLED:
+            if strain >= PC.RUPTURE_STRAIN:
+                return 0.0  # Signal to caller: fiber should rupture
 
-        F_wlc = self._k_B_T_over_xi * (term1 + term2 + term3)
-        F_eff = self.S * F_wlc
+            if strain >= PC.MAX_STRAIN:
+                # Sigmoid blend for high strain (above WLC singularity zone)
+                w = 0.5 * (1.0 + math.tanh(
+                    (strain - PC.SIGMOID_EPSILON_MID)
+                    / PC.SIGMOID_DELTA_EPSILON))
 
-        # Force clamping to prevent numerical overflow
+                # WLC component (singularity guard at 0.995)
+                eps_wlc = min(strain, 0.995)
+                one_minus = 1.0 - eps_wlc
+                F_wlc = self._k_B_T_over_xi * (
+                    1.0 / (4.0 * one_minus**2) - 0.25 + eps_wlc)
+                if self.force_model == 'ewlc':
+                    F_wlc += self.K0 * eps_wlc
+
+                # Backbone component: linear spring K_bb * ε
+                d_m = self.diameter_nm * 1e-9
+                A = math.pi * (d_m / 2.0) ** 2
+                K_bb = PC.Y_A_STRONG * A / self.L_c
+                F_backbone = K_bb * strain
+
+                # Blend (no F_MAX cap in sigmoid regime)
+                F_model = (1.0 - w) * F_wlc + w * F_backbone
+                return float(self.S * F_model)
+
+            # Below MAX_STRAIN: fall through to WLC-only path
+
+        # WLC-only path — unchanged
+        wlc_strain = min(strain, PC.MAX_STRAIN)
+        one_minus_eps = 1.0 - wlc_strain
+        F_wlc = self._k_B_T_over_xi * (
+            1.0 / (4.0 * one_minus_eps**2) - 0.25 + wlc_strain
+        )
+        if self.force_model == 'ewlc':
+            F_model = F_wlc + self.K0 * wlc_strain
+        else:
+            F_model = F_wlc
+
+        F_eff = self.S * F_model
         if F_eff > PC.F_MAX:
-            import warnings
-            warnings.warn(
-                f"Force ceiling hit: F={F_eff:.3e} N (clamped to {PC.F_MAX:.3e} N). "
-                f"Fiber strain={strain:.3f}, S={self.S:.3f}. "
-                f"This indicates potential numerical instability."
-            )
             F_eff = PC.F_MAX
-
         return float(F_eff)
 
     def compute_energy(self, x: float) -> float:
-        """
-        WLC energy (corrected integral of force law).
+        """U_eff = S × U_model.
 
-        U(ε) = (k_B T L_c / ξ) × [1/(4(1-ε)) - 1/4 - ε/4 + ε²/2]
-        U_eff = S × U_wlc(ε)
-
-        This formula is mathematically consistent with compute_force:
-        Verified numerically that |F - dU/dx|/F < 1e-6
-
-        Args:
-            x: Current extension [m]
-
-        Returns:
-            Effective energy [J]
+        When THREE_REGIME_ENABLED: energy is the integral of the sigmoid-blended
+        force, computed via 8-point Gauss-Legendre quadrature. This guarantees
+        dU/dx = F for L-BFGS-B gradient consistency.
         """
         strain = self._safe_strain(x)
-        one_minus_eps = 1.0 - strain
 
-        term1 = 1.0 / (4.0 * one_minus_eps)
-        term2 = -0.25
-        term3 = -strain / 4.0
-        term4 = strain**2 / 2.0
+        if PC.THREE_REGIME_ENABLED:
+            if strain >= PC.RUPTURE_STRAIN:
+                return 0.0  # Ruptured fiber carries no energy
 
-        U_wlc = self._k_B_T_Lc_over_xi * (term1 + term2 + term3 + term4)
-        U_eff = self.S * U_wlc
+            if strain >= PC.MAX_STRAIN:
+                # High strain: GL quadrature of sigmoid-blended force
+                # Split integral: analytical WLC from 0 to MAX_STRAIN,
+                # then GL quadrature of F_blend from MAX_STRAIN to strain
+                eps0 = PC.MAX_STRAIN
+
+                # Analytical WLC energy from 0 to MAX_STRAIN
+                one_minus_0 = 1.0 - eps0
+                U_wlc_base = self._k_B_T_Lc_over_xi * (
+                    1.0 / (4.0 * one_minus_0) - 0.25
+                    - eps0 / 4.0 + eps0**2 / 2.0)
+                if self.force_model == 'ewlc':
+                    U_wlc_base += self.L_c * (self.K0 / 2.0) * eps0**2
+
+                # GL quadrature of F_blend from MAX_STRAIN to strain
+                delta = strain - eps0
+                h = delta / 2.0
+                kBT_xi = self._k_B_T_over_xi
+                d_m = self.diameter_nm * 1e-9
+                A = math.pi * (d_m / 2.0) ** 2
+                K_bb = PC.Y_A_STRONG * A / self.L_c
+                is_ewlc = (self.force_model == 'ewlc')
+
+                U_integral = 0.0
+                for k in range(_GL_N):
+                    # Map GL node to [eps0, strain]
+                    eps_k = eps0 + h * (1.0 + _GL_NODES[k])
+
+                    sig_w = 0.5 * (1.0 + math.tanh(
+                        (eps_k - PC.SIGMOID_EPSILON_MID)
+                        / PC.SIGMOID_DELTA_EPSILON))
+
+                    eps_wlc_k = min(eps_k, 0.995)
+                    one_minus_k = 1.0 - eps_wlc_k
+                    F_wlc_k = kBT_xi * (
+                        1.0 / (4.0 * one_minus_k**2) - 0.25 + eps_wlc_k)
+                    if is_ewlc:
+                        F_wlc_k += self.K0 * eps_wlc_k
+
+                    F_bb_k = K_bb * eps_k
+                    F_blend_k = (1.0 - sig_w) * F_wlc_k + sig_w * F_bb_k
+                    U_integral += _GL_WEIGHTS[k] * F_blend_k
+
+                U_model = U_wlc_base + self.L_c * h * U_integral
+                return float(self.S * U_model)
+
+            # Below MAX_STRAIN: fall through to WLC-only path
+
+        # WLC-only path — unchanged
+        wlc_strain = min(strain, PC.MAX_STRAIN)
+        one_minus_eps = 1.0 - wlc_strain
+        U_wlc = self._k_B_T_Lc_over_xi * (
+            1.0 / (4.0 * one_minus_eps) - 0.25 - wlc_strain / 4.0 + wlc_strain**2 / 2.0
+        )
+        if self.force_model == 'ewlc':
+            U_model = U_wlc + self.L_c * (self.K0 / 2.0) * wlc_strain**2
+        else:
+            U_model = U_wlc
+
+        U_eff = self.S * U_model
         return float(U_eff)
 
     def compute_cleavage_rate(self, current_length: float) -> float:
@@ -241,7 +277,8 @@ class NetworkState:
     time: float  # [s]
     fibers: List[WLCFiber]
     node_positions: Dict[int, np.ndarray]  # node_id -> [x, y] in [m]
-    fixed_nodes: Dict[int, np.ndarray]  # Boundary conditions
+    fixed_nodes: Dict[int, np.ndarray]  # Fully fixed boundary conditions (both X and Y)
+    partial_fixed_x: Dict[int, float] = field(default_factory=dict)  # Nodes with only X fixed (Y free)
 
     # Mechanical solver state
     energy: float = 0.0  # [J]
@@ -271,6 +308,60 @@ class NetworkState:
     clearance_event: Optional[Dict[str, Any]] = None
     # Records: time, critical_fiber_id, lysis_fraction, remaining_fibers, total_fibers
 
+    # ABM state tracking (None when mean-field mode active)
+    abm_next_fiber_id: int = 0   # Counter for new fiber IDs from positional splits
+    abm_next_node_id: int = 0    # Counter for new node IDs from positional splits
+
+    # Fiber lookup index: {fiber_id: list_index} — rebuilt on mutation
+    _fiber_index: Dict[int, int] = field(default_factory=dict, repr=False)
+
+    # Cached adjacency for BFS connectivity checks — avoids full rebuild each call
+    _adjacency_cache: Optional[Dict[int, set]] = field(default=None, repr=False)
+    _adjacency_cache_valid: bool = field(default=False, repr=False)
+
+    def rebuild_fiber_index(self):
+        """Rebuild fiber_id → list index mapping. Call after any fiber list mutation."""
+        self._fiber_index = {f.fiber_id: i for i, f in enumerate(self.fibers)}
+
+    def invalidate_adjacency_cache(self):
+        """Mark adjacency cache as stale. Call after topology changes (splits)."""
+        self._adjacency_cache_valid = False
+
+    def get_adjacency(self):
+        """Get or rebuild adjacency dict for active fibers."""
+        if self._adjacency_cache_valid and self._adjacency_cache is not None:
+            return self._adjacency_cache
+        adj = defaultdict(set)
+        for fiber in self.fibers:
+            if fiber.S > 0:
+                adj[fiber.node_i].add(fiber.node_j)
+                adj[fiber.node_j].add(fiber.node_i)
+        self._adjacency_cache = adj
+        self._adjacency_cache_valid = True
+        return adj
+
+    def remove_fiber_from_adjacency(self, fiber):
+        """Incrementally remove a fiber's edges from the cached adjacency."""
+        if self._adjacency_cache is None:
+            return
+        adj = self._adjacency_cache
+        adj[fiber.node_i].discard(fiber.node_j)
+        adj[fiber.node_j].discard(fiber.node_i)
+
+    def get_fiber(self, fiber_id: int):
+        """O(1) fiber lookup by ID. Returns (index, fiber) or (None, None)."""
+        idx = self._fiber_index.get(fiber_id)
+        if idx is not None and idx < len(self.fibers):
+            f = self.fibers[idx]
+            if f.fiber_id == fiber_id:
+                return idx, f
+        # Index stale — fallback to linear scan and rebuild
+        for i, f in enumerate(self.fibers):
+            if f.fiber_id == fiber_id:
+                self._fiber_index[fiber_id] = i
+                return i, f
+        return None, None
+
 
 
 class EnergyMinimizationSolver:
@@ -279,18 +370,33 @@ class EnergyMinimizationSolver:
 
     Uses the identity ∂E/∂r_i = -F_net,i to compute gradients
     via vectorized NumPy operations.
+
+    Supports partial constraints: nodes with only X coordinate fixed (Y free).
+
+    CRITICAL: Energy and gradient are scaled by 1/k_B_T to avoid numerical issues.
+    WLC energies are ~1e-20 J in SI, but L-BFGS-B's ftol uses max(|E|, 1) as
+    denominator. When |E| << 1, the tolerance becomes absolute (not relative),
+    causing the solver to converge at iter=0 without moving any node.
+    Scaling to k_B_T units makes energies O(1), fixing this.
     """
 
-    def __init__(self, fibers: List[WLCFiber], fixed_coords: Dict[int, np.ndarray]):
+    # Energy scaling: convert from SI (Joules) to thermal units (k_B_T)
+    # This makes E ~O(1) per fiber, well-conditioned for L-BFGS-B
+    ENERGY_SCALE = 1.0 / PC.k_B_T  # ~2.34e20
+
+    def __init__(self, fibers: List[WLCFiber], fixed_coords: Dict[int, np.ndarray],
+                 partial_fixed_x: Dict[int, float] = None):
         """
         Initialize solver with network topology.
 
         Args:
             fibers: List of WLC fibers
-            fixed_coords: Boundary node positions {node_id: [x, y]}
+            fixed_coords: Fully fixed node positions {node_id: [x, y]}
+            partial_fixed_x: Nodes with only X fixed {node_id: x_value}, Y is free
         """
         self.fibers = fibers
         self.fixed_coords = fixed_coords
+        self.partial_fixed_x = partial_fixed_x if partial_fixed_x is not None else {}
 
         # Extract all node IDs
         all_node_ids = set()
@@ -298,9 +404,17 @@ class EnergyMinimizationSolver:
             all_node_ids.add(f.node_i)
             all_node_ids.add(f.node_j)
 
-        # Separate free vs fixed nodes
-        self.free_node_ids = sorted(all_node_ids - set(fixed_coords.keys()))
-        self.n_free = len(self.free_node_ids)
+        # Separate node types:
+        # - Fully fixed: both X and Y constrained (left boundary)
+        # - Partially fixed: X constrained, Y free (right boundary)
+        # - Free: both X and Y free (interior nodes)
+        fully_fixed = set(fixed_coords.keys())
+        partially_fixed = set(self.partial_fixed_x.keys())
+        self.free_node_ids = sorted(all_node_ids - fully_fixed - partially_fixed)
+        self.partial_node_ids = sorted(partially_fixed)
+
+        self.n_free = len(self.free_node_ids)  # Both X and Y optimized
+        self.n_partial = len(self.partial_node_ids)  # Only Y optimized
         self.n_total = len(all_node_ids)
 
         # Create node index mapping
@@ -315,20 +429,228 @@ class EnergyMinimizationSolver:
         self.fiber_node_j_idx = np.array([self.node_idx[f.node_j] for f in self.fibers], dtype=int)
         self.fiber_L_c = np.array([f.L_c for f in self.fibers])
         self.fiber_S = np.array([f.S for f in self.fibers])
+        self.fiber_xi = np.array([f.xi for f in self.fibers])
+        self.fiber_K0 = np.array([f.K0 for f in self.fibers])
+        self.fiber_is_ewlc = np.array([f.force_model == 'ewlc' for f in self.fibers])
+        self.fiber_diameter_nm = np.array([f.diameter_nm for f in self.fibers])
+
+        # Pre-allocate reusable arrays (avoid repeated allocations per L-BFGS-B call)
+        n_fibers = len(self.fibers)
+        self._pos_all = np.zeros((self.n_total, 2))
+        self._forces_all = np.zeros((self.n_total, 2))
+        n_free_vars = 2 * self.n_free
+        n_partial_vars = self.n_partial
+        self._grad = np.zeros(n_free_vars + n_partial_vars)
+
+        # Pre-compute free/partial node index arrays for gradient extraction
+        self._free_node_internal_idx = np.array(
+            [self.node_idx[nid] for nid in self.free_node_ids], dtype=int)
+        self._partial_node_internal_idx = np.array(
+            [self.node_idx[nid] for nid in self.partial_node_ids], dtype=int)
+
+    def _batch_wlc_energy(self, lengths: np.ndarray) -> np.ndarray:
+        """Vectorized WLC/eWLC energy, GL quadrature of sigmoid blend when THREE_REGIME_ENABLED."""
+        raw_strain = (lengths - self.fiber_L_c) / self.fiber_L_c
+
+        if PC.THREE_REGIME_ENABLED:
+            strain = np.minimum(raw_strain, PC.RUPTURE_STRAIN)
+            n_fibers = len(strain)
+
+            # Fibers below MAX_STRAIN: standard WLC (identical to disabled path)
+            # Fibers at/above MAX_STRAIN: analytical WLC base + GL quadrature above
+            U_model = np.zeros(n_fibers)
+            hi = strain >= PC.MAX_STRAIN
+            lo = ~hi
+
+            # Low-strain fibers: standard WLC energy
+            if np.any(lo):
+                s_lo = np.minimum(strain[lo], PC.MAX_STRAIN)
+                ome_lo = 1.0 - s_lo
+                kBT_Lc_xi_lo = PC.k_B_T * self.fiber_L_c[lo] / self.fiber_xi[lo]
+                U_lo = kBT_Lc_xi_lo * (
+                    1.0 / (4.0 * ome_lo) - 0.25 - s_lo / 4.0 + s_lo**2 / 2.0)
+                ewlc_lo = self.fiber_is_ewlc[lo]
+                if np.any(ewlc_lo):
+                    U_lo[ewlc_lo] += (self.fiber_L_c[lo][ewlc_lo] *
+                                      (self.fiber_K0[lo][ewlc_lo] / 2.0) * s_lo[ewlc_lo]**2)
+                U_model[lo] = self.fiber_S[lo] * U_lo
+
+            # High-strain fibers: WLC base to MAX_STRAIN + GL quadrature above
+            if np.any(hi):
+                s_hi = strain[hi]
+                eps0 = PC.MAX_STRAIN
+                one_minus_0 = 1.0 - eps0
+
+                # Analytical WLC energy from 0 to MAX_STRAIN
+                kBT_Lc_xi_hi = PC.k_B_T * self.fiber_L_c[hi] / self.fiber_xi[hi]
+                U_base = kBT_Lc_xi_hi * (
+                    1.0 / (4.0 * one_minus_0) - 0.25 - eps0 / 4.0 + eps0**2 / 2.0)
+                ewlc_hi = self.fiber_is_ewlc[hi]
+                if np.any(ewlc_hi):
+                    U_base[ewlc_hi] += (self.fiber_L_c[hi][ewlc_hi] *
+                                        (self.fiber_K0[hi][ewlc_hi] / 2.0) * eps0**2)
+
+                # GL quadrature of F_blend from MAX_STRAIN to strain
+                delta = s_hi - eps0
+                h = delta / 2.0
+
+                kBT_xi_hi = PC.k_B_T / self.fiber_xi[hi]
+                K0_hi = self.fiber_K0[hi]
+                d_m_hi = self.fiber_diameter_nm[hi] * 1e-9
+                A_hi = np.pi * (d_m_hi / 2.0)**2
+                K_bb_hi = PC.Y_A_STRONG * A_hi / self.fiber_L_c[hi]
+
+                U_sum = np.zeros(len(s_hi))
+                for k in range(_GL_N):
+                    eps_k = eps0 + h * (1.0 + _GL_NODES[k])
+
+                    sig_w = 0.5 * (1.0 + np.tanh(
+                        (eps_k - PC.SIGMOID_EPSILON_MID) / PC.SIGMOID_DELTA_EPSILON))
+
+                    eps_wlc_k = np.minimum(eps_k, 0.995)
+                    one_minus_k = 1.0 - eps_wlc_k
+                    F_wlc_k = kBT_xi_hi * (
+                        1.0 / (4.0 * one_minus_k**2) - 0.25 + eps_wlc_k)
+                    if np.any(ewlc_hi):
+                        F_wlc_k[ewlc_hi] += K0_hi[ewlc_hi] * eps_wlc_k[ewlc_hi]
+
+                    F_bb_k = K_bb_hi * eps_k
+                    F_blend_k = (1.0 - sig_w) * F_wlc_k + sig_w * F_bb_k
+                    U_sum += _GL_WEIGHTS[k] * F_blend_k
+
+                U_model[hi] = self.fiber_S[hi] * (
+                    U_base + self.fiber_L_c[hi] * h * U_sum)
+
+            # Zero out ruptured fibers
+            U_model = np.where(raw_strain >= PC.RUPTURE_STRAIN, 0.0, U_model)
+
+            return U_model
+
+        # Original WLC-only path (THREE_REGIME_ENABLED=False) — unchanged
+        strain = np.minimum(raw_strain, PC.MAX_STRAIN)
+        one_minus_eps = 1.0 - strain
+        kBT_Lc_xi = PC.k_B_T * self.fiber_L_c / self.fiber_xi
+        U_wlc = kBT_Lc_xi * (
+            1.0 / (4.0 * one_minus_eps) - 0.25 - strain / 4.0 + strain**2 / 2.0
+        )
+        U_model = U_wlc.copy()
+        if np.any(self.fiber_is_ewlc):
+            U_model[self.fiber_is_ewlc] += (
+                self.fiber_L_c[self.fiber_is_ewlc] *
+                (self.fiber_K0[self.fiber_is_ewlc] / 2.0) *
+                strain[self.fiber_is_ewlc]**2
+            )
+        return self.fiber_S * U_model
+
+    def _batch_wlc_force(self, lengths: np.ndarray) -> np.ndarray:
+        """Vectorized WLC/eWLC force, sigmoid blend when THREE_REGIME_ENABLED."""
+        raw_strain = (lengths - self.fiber_L_c) / self.fiber_L_c
+
+        if PC.THREE_REGIME_ENABLED:
+            strain = np.minimum(raw_strain, PC.RUPTURE_STRAIN)
+
+            # Fibers below MAX_STRAIN: standard WLC (identical to disabled path)
+            # Fibers at/above MAX_STRAIN: sigmoid blend
+            hi = strain >= PC.MAX_STRAIN
+            lo = ~hi
+
+            F_model = np.zeros_like(strain)
+
+            # Low-strain fibers: standard WLC with F_MAX cap
+            if np.any(lo):
+                s_lo = np.minimum(strain[lo], PC.MAX_STRAIN)
+                ome_lo = 1.0 - s_lo
+                kBT_xi_lo = PC.k_B_T / self.fiber_xi[lo]
+                F_lo = kBT_xi_lo * (1.0 / (4.0 * ome_lo**2) - 0.25 + s_lo)
+                ewlc_lo = self.fiber_is_ewlc[lo]
+                if np.any(ewlc_lo):
+                    F_lo[ewlc_lo] += self.fiber_K0[lo][ewlc_lo] * s_lo[ewlc_lo]
+                F_lo = self.fiber_S[lo] * F_lo
+                F_model[lo] = np.minimum(F_lo, PC.F_MAX)
+
+            # High-strain fibers: sigmoid blend (no F_MAX cap)
+            if np.any(hi):
+                s_hi = strain[hi]
+                w = 0.5 * (1.0 + np.tanh(
+                    (s_hi - PC.SIGMOID_EPSILON_MID) / PC.SIGMOID_DELTA_EPSILON))
+
+                eps_wlc = np.minimum(s_hi, 0.995)
+                one_minus = 1.0 - eps_wlc
+                kBT_xi_hi = PC.k_B_T / self.fiber_xi[hi]
+                F_wlc = kBT_xi_hi * (1.0 / (4.0 * one_minus**2) - 0.25 + eps_wlc)
+                ewlc_hi = self.fiber_is_ewlc[hi]
+                if np.any(ewlc_hi):
+                    F_wlc[ewlc_hi] += self.fiber_K0[hi][ewlc_hi] * eps_wlc[ewlc_hi]
+
+                d_m = self.fiber_diameter_nm[hi] * 1e-9
+                A = np.pi * (d_m / 2.0)**2
+                K_bb = PC.Y_A_STRONG * A / self.fiber_L_c[hi]
+                F_backbone = K_bb * s_hi
+
+                F_blend = (1.0 - w) * F_wlc + w * F_backbone
+                F_model[hi] = self.fiber_S[hi] * F_blend
+
+            # Zero out ruptured fibers
+            F_model = np.where(raw_strain >= PC.RUPTURE_STRAIN, 0.0, F_model)
+
+            return F_model
+
+        # Original WLC-only path (THREE_REGIME_ENABLED=False) — unchanged
+        strain = np.minimum(raw_strain, PC.MAX_STRAIN)
+        one_minus_eps = 1.0 - strain
+        kBT_xi = PC.k_B_T / self.fiber_xi
+        F_wlc = kBT_xi * (1.0 / (4.0 * one_minus_eps**2) - 0.25 + strain)
+        F_model = F_wlc.copy()
+        if np.any(self.fiber_is_ewlc):
+            F_model[self.fiber_is_ewlc] += (
+                self.fiber_K0[self.fiber_is_ewlc] * strain[self.fiber_is_ewlc]
+            )
+        F_eff = self.fiber_S * F_model
+        return np.minimum(F_eff, PC.F_MAX)
 
     def pack_free_coords(self, node_positions: Dict[int, np.ndarray]) -> np.ndarray:
-        """Pack free node positions into flat array [x1, y1, x2, y2, ...]."""
-        x = np.zeros(2 * self.n_free)
+        """
+        Pack free/partial node coordinates into flat array.
+
+        Order: [free nodes (x,y), partial nodes (y only)]
+        """
+        # Free nodes: both X and Y
+        n_free_vars = 2 * self.n_free
+        # Partial nodes: only Y (X is constrained)
+        n_partial_vars = self.n_partial
+        x = np.zeros(n_free_vars + n_partial_vars)
+
+        # Pack free nodes (both coordinates)
         for i, nid in enumerate(self.free_node_ids):
             x[2*i] = node_positions[nid][0]
             x[2*i + 1] = node_positions[nid][1]
+
+        # Pack partial nodes (Y coordinate only)
+        offset = n_free_vars
+        for i, nid in enumerate(self.partial_node_ids):
+            x[offset + i] = node_positions[nid][1]  # Only Y
+
         return x
 
     def unpack_free_coords(self, x: np.ndarray, base_positions: Dict[int, np.ndarray]) -> Dict[int, np.ndarray]:
-        """Unpack flat array into node_positions dict (free + fixed)."""
-        positions = dict(base_positions)  # Start with fixed nodes
+        """
+        Unpack flat array into node_positions dict.
+
+        Reconstructs: free nodes (from x,y), partial nodes (X from constraint, Y from x), fixed nodes (from base_positions)
+        """
+        positions = dict(base_positions)  # Start with fully fixed nodes
+
+        # Unpack free nodes (both X and Y from optimization)
         for i, nid in enumerate(self.free_node_ids):
             positions[nid] = np.array([x[2*i], x[2*i + 1]])
+
+        # Unpack partial nodes (X from constraint, Y from optimization)
+        n_free_vars = 2 * self.n_free
+        for i, nid in enumerate(self.partial_node_ids):
+            x_fixed = self.partial_fixed_x[nid]  # X is constrained
+            y_opt = x[n_free_vars + i]  # Y is optimized
+            positions[nid] = np.array([x_fixed, y_opt])
+
         return positions
 
     def compute_total_energy(self, x: np.ndarray, fixed_coords: Dict[int, np.ndarray]) -> float:
@@ -344,26 +666,21 @@ class EnergyMinimizationSolver:
         Returns:
             Total energy [J]
         """
-        # Unpack coordinates
+        # Unpack coordinates into pre-allocated position array
         node_positions = self.unpack_free_coords(x, fixed_coords)
-
-        # Build position array for all nodes
-        pos_all = np.zeros((self.n_total, 2))
+        self._pos_all[:] = 0
         for nid, pos in node_positions.items():
-            pos_all[self.node_idx[nid]] = pos
+            self._pos_all[self.node_idx[nid]] = pos
 
         # Vectorized geometry computation
-        r_i = pos_all[self.fiber_node_i_idx]  # (N_fibers, 2)
-        r_j = pos_all[self.fiber_node_j_idx]
+        r_i = self._pos_all[self.fiber_node_i_idx]  # (N_fibers, 2)
+        r_j = self._pos_all[self.fiber_node_j_idx]
         dr = r_j - r_i
         lengths = np.linalg.norm(dr, axis=1)  # (N_fibers,)
 
-        # Compute energy for each fiber
-        energy = 0.0
-        for idx, fiber in enumerate(self.fibers):
-            energy += fiber.compute_energy(lengths[idx])
-
-        return energy
+        # Batch-vectorized energy (no Python loop)
+        energies = self._batch_wlc_energy(lengths)
+        return float(np.sum(energies)) * self.ENERGY_SCALE
 
     def compute_gradient(self, x: np.ndarray, fixed_coords: Dict[int, np.ndarray]) -> np.ndarray:
         """
@@ -378,17 +695,15 @@ class EnergyMinimizationSolver:
         Returns:
             Gradient array (same shape as x)
         """
-        # Unpack coordinates
+        # Unpack coordinates into pre-allocated position array
         node_positions = self.unpack_free_coords(x, fixed_coords)
-
-        # Build position array
-        pos_all = np.zeros((self.n_total, 2))
+        self._pos_all[:] = 0
         for nid, pos in node_positions.items():
-            pos_all[self.node_idx[nid]] = pos
+            self._pos_all[self.node_idx[nid]] = pos
 
         # Vectorized geometry
-        r_i = pos_all[self.fiber_node_i_idx]
-        r_j = pos_all[self.fiber_node_j_idx]
+        r_i = self._pos_all[self.fiber_node_i_idx]
+        r_j = self._pos_all[self.fiber_node_j_idx]
         dr = r_j - r_i
         lengths = np.linalg.norm(dr, axis=1)
 
@@ -396,29 +711,43 @@ class EnergyMinimizationSolver:
         safe_lengths = np.where(lengths > 0, lengths, 1.0)
         unit_vec = dr / safe_lengths[:, np.newaxis]
 
-        # Compute forces for each fiber
-        forces_mag = np.array([fiber.compute_force(lengths[i]) for i, fiber in enumerate(self.fibers)])
+        # Batch-vectorized force magnitudes (no Python loop)
+        forces_mag = self._batch_wlc_force(lengths)
 
         # Force vectors (pointing j -> i along fiber)
         force_vec = forces_mag[:, np.newaxis] * unit_vec
 
-        # Accumulate forces on nodes (vectorized with np.add.at)
-        forces_all = np.zeros((self.n_total, 2))
-        np.add.at(forces_all, self.fiber_node_i_idx, force_vec)   # Pull on node_i
-        np.add.at(forces_all, self.fiber_node_j_idx, -force_vec)  # Pull on node_j
+        # Accumulate forces on nodes using pre-allocated array
+        self._forces_all[:] = 0
+        np.add.at(self._forces_all, self.fiber_node_i_idx, force_vec)   # Pull on node_i
+        np.add.at(self._forces_all, self.fiber_node_j_idx, -force_vec)  # Pull on node_j
 
-        # Extract gradient for free nodes: grad = -F
-        grad = np.zeros(2 * self.n_free)
-        for i, nid in enumerate(self.free_node_ids):
-            idx = self.node_idx[nid]
-            grad[2*i] = -forces_all[idx, 0]
-            grad[2*i + 1] = -forces_all[idx, 1]
+        # Extract gradient using pre-computed index arrays
+        n_free_vars = 2 * self.n_free
+        self._grad[:] = 0
 
-        return grad
+        # Gradient for free nodes: both X and Y (vectorized)
+        if self.n_free > 0:
+            free_forces = self._forces_all[self._free_node_internal_idx]  # (n_free, 2)
+            self._grad[0:n_free_vars:2] = -free_forces[:, 0]   # dE/dx
+            self._grad[1:n_free_vars:2] = -free_forces[:, 1]   # dE/dy
+
+        # Gradient for partial nodes: only Y (vectorized)
+        if self.n_partial > 0:
+            partial_forces = self._forces_all[self._partial_node_internal_idx]
+            self._grad[n_free_vars:] = -partial_forces[:, 1]  # dE/dy only
+
+        # Scale gradient to match energy scaling (k_B_T units)
+        return self._grad * self.ENERGY_SCALE
 
     def minimize(self, initial_positions: Dict[int, np.ndarray]) -> Tuple[Dict[int, np.ndarray], float]:
         """Minimize network energy using L-BFGS-B with analytical Jacobian."""
         x0 = self.pack_free_coords(initial_positions)
+
+        if len(x0) == 0:
+            # No free variables to optimize — return energy in SI (unscaled)
+            scaled_E = self.compute_total_energy(x0, self.fixed_coords)
+            return dict(initial_positions), scaled_E / self.ENERGY_SCALE
 
         result = minimize(
             fun=self.compute_total_energy,
@@ -426,14 +755,19 @@ class EnergyMinimizationSolver:
             args=(self.fixed_coords,),
             method='L-BFGS-B',
             jac=self.compute_gradient,
-            options={'maxiter': 1000, 'ftol': 1e-9}
+            options={'maxiter': 1000, 'ftol': 1e-12}
         )
 
-        # Convergence warning suppressed for GUI performance — non-convergence
-        # is handled gracefully by using the best position found so far
+        # Diagnostic: only log when actual movement occurs (avoids console flood)
+        displacement = np.abs(result.x - x0)
+        max_disp = np.max(displacement) if len(displacement) > 0 else 0.0
+        if max_disp > 1e-10:  # Only log meaningful displacement (>0.1nm)
+            print(f"[L-BFGS-B] max_disp={max_disp*1e6:.1f}µm, "
+                  f"iters={result.nit}, n_vars={len(x0)}")
 
         relaxed_positions = self.unpack_free_coords(result.x, self.fixed_coords)
-        return relaxed_positions, result.fun
+        # Return energy in SI units (unscale from k_B_T back to Joules)
+        return relaxed_positions, result.fun / self.ENERGY_SCALE
 
 
 
@@ -446,25 +780,43 @@ class StochasticChemistryEngine:
     """
 
     def __init__(self, rng_seed: int, tau_leap_threshold: float = 100.0,
-                 plasmin_concentration: float = 1.0):
+                 plasmin_concentration: float = 1.0, delta_S: float = 0.1,
+                 strain_cleavage_mode: str = 'inhibitory',
+                 gamma_biphasic: float = 1.15,
+                 eps_star: float = 0.22):
         """
         Initialize chemistry engine with deterministic RNG.
 
         Args:
             rng_seed: Random seed for NumPy Generator (deterministic replay)
             tau_leap_threshold: Switch to tau-leaping when total propensity > this
-            plasmin_concentration: λ₀ scaling factor for cleavage propensities.
-                Scales all cleavage rates: k_eff(ε) = λ₀ × k₀ × exp(-β × ε)
-                λ₀ = 1.0 → baseline (k₀ = 0.1 s⁻¹ at zero strain)
-                λ₀ > 1.0 → higher plasmin concentration → faster lysis
+            plasmin_concentration: λ₀ dimensionless concentration multiplier.
+                Per-event propensity: a = λ₀ × k₀ × f(ε) / δS
+                k₀ = 0.020 s⁻¹ (Lynch et al. 2022: mean 49.8 s per fiber)
+                The /δS factor ensures total rupture time is independent of
+                the discretization step size (1/δS events needed per fiber).
+                λ₀ = 1.0 → physiological (~1 nM plasmin)
+                λ₀ = 10.0 → 10× plasmin concentration
+            delta_S: Integrity decrement per cleavage event (default 0.1 = 10 hits)
+            strain_cleavage_mode: Mechanochemical coupling model:
+                'inhibitory' — k(ε) = k₀ × exp(-β × ε)  [Varju 2011]
+                'neutral'    — k(ε) = k₀                 [topology-only]
+                'biphasic'   — k(ε) = k₀ × exp(-β × ε) for ε ≤ ε*,
+                               k(ε) = k₀ × exp(-β × ε*) × exp(+γ × (ε-ε*)) for ε > ε*
+            gamma_biphasic: γ recovery exponent for biphasic mode (default 1.15)
+            eps_star: ε* crossover strain for biphasic mode (default 0.22 = 22%)
         """
         self.rng = np.random.Generator(np.random.PCG64(rng_seed))
         self.tau_leap_threshold = tau_leap_threshold
         self.plasmin_concentration = float(plasmin_concentration)
+        self.delta_S = float(delta_S)
+        self.strain_cleavage_mode = strain_cleavage_mode
+        self.gamma_biphasic = float(gamma_biphasic)
+        self.eps_star = float(eps_star)
 
     def compute_propensities(self, state: NetworkState) -> Dict[int, float]:
         """
-        Compute reaction propensities for all fibers (strain-based).
+        Compute reaction propensities for all fibers (strain-based, vectorized).
 
         Args:
             state: Current network state
@@ -472,35 +824,74 @@ class StochasticChemistryEngine:
         Returns:
             {fiber_id: propensity [1/s]}
         """
-        propensities = {}
-        for fiber in state.fibers:
-            if fiber.S <= 0.0:
-                # Already ruptured
-                propensities[fiber.fiber_id] = 0.0
-            else:
-                # Compute current fiber length
-                pos_i = state.node_positions[fiber.node_i]
-                pos_j = state.node_positions[fiber.node_j]
-                length = float(np.linalg.norm(pos_j - pos_i))
+        fibers = state.fibers
+        n = len(fibers)
+        if n == 0:
+            return {}
 
-                # Strain-based cleavage rate scaled by plasmin concentration
-                # k_eff(ε) = λ₀ × k₀ × exp(-β × ε)
-                k_cleave = fiber.compute_cleavage_rate(length)
-                propensities[fiber.fiber_id] = self.plasmin_concentration * k_cleave
-        return propensities
+        # Build arrays for batch computation
+        fiber_ids = np.empty(n, dtype=int)
+        S_arr = np.empty(n)
+        L_c_arr = np.empty(n)
+        k_cat_arr = np.empty(n)
+        lengths = np.empty(n)
 
-    def gillespie_step(self, state: NetworkState, max_dt: float) -> Tuple[Optional[int], float]:
+        for i, f in enumerate(fibers):
+            fiber_ids[i] = f.fiber_id
+            S_arr[i] = f.S
+            L_c_arr[i] = f.L_c
+            k_cat_arr[i] = f.k_cat_0
+            pos_i = state.node_positions[f.node_i]
+            pos_j = state.node_positions[f.node_j]
+            lengths[i] = np.linalg.norm(pos_j - pos_i)
+
+        # Vectorized strain and cleavage rate
+        strain = np.maximum(0.0, (lengths - L_c_arr) / L_c_arr)
+
+        # Mechanochemical coupling: compute k_cleave based on mode
+        if self.strain_cleavage_mode == 'neutral':
+            # k(ε) = k₀ — strain has no effect on cleavage rate
+            k_cleave = k_cat_arr.copy()
+        elif self.strain_cleavage_mode == 'biphasic':
+            # k(ε) = k₀ × exp(-β×ε)           for ε ≤ ε*
+            # k(ε) = k₀ × exp(-β×ε*) × exp(+γ×(ε-ε*))  for ε > ε*
+            below = strain <= self.eps_star
+            exponents = np.where(
+                below,
+                np.maximum(-PC.beta_strain * strain, -20.0),
+                np.maximum(-PC.beta_strain * self.eps_star
+                           + self.gamma_biphasic * (strain - self.eps_star), -20.0),
+            )
+            k_cleave = k_cat_arr * np.exp(exponents)
+        else:
+            # 'inhibitory' (default): k(ε) = k₀ × exp(-β×ε)  [Varju 2011]
+            exponents = np.maximum(-PC.beta_strain * strain, -20.0)
+            k_cleave = k_cat_arr * np.exp(exponents)
+
+        # Per-event propensity: a = lam0 * k0 * f(eps) / delta_S
+        # The /delta_S correction ensures the TOTAL time to full rupture
+        # (requiring 1/delta_S events) equals 1 / (lam0 * k0 * f(eps)),
+        # matching the experimental single-fiber cleavage time (Lynch 2022: 49.8 s).
+        # Zero out fully ruptured fibers (S == 0).
+        props = np.where(S_arr > 0, self.plasmin_concentration * k_cleave / self.delta_S, 0.0)
+
+        return dict(zip(fiber_ids.tolist(), props.tolist()))
+
+    def gillespie_step(self, state: NetworkState, max_dt: float,
+                       propensities: Optional[Dict[int, float]] = None) -> Tuple[Optional[int], float]:
         """
         Gillespie SSA: exact stochastic simulation.
 
         Args:
             state: Current state
             max_dt: Maximum allowed timestep
+            propensities: Pre-computed propensities (avoids redundant computation)
 
         Returns:
             (fiber_id_to_cleave, dt) or (None, max_dt) if no reaction
         """
-        propensities = self.compute_propensities(state)
+        if propensities is None:
+            propensities = self.compute_propensities(state)
         a_total = sum(propensities.values())
 
         if a_total == 0:
@@ -526,7 +917,8 @@ class StochasticChemistryEngine:
         # Fallback (numerical precision)
         return list(propensities.keys())[-1], dt
 
-    def tau_leap_step(self, state: NetworkState, tau: float) -> List[int]:
+    def tau_leap_step(self, state: NetworkState, tau: float,
+                      propensities: Optional[Dict[int, float]] = None) -> List[int]:
         """
         Tau-leaping: approximate many reactions in time tau.
 
@@ -535,6 +927,7 @@ class StochasticChemistryEngine:
         Args:
             state: Current state
             tau: Leap interval [s]
+            propensities: Pre-computed propensities (avoids redundant computation)
 
         Returns:
             List of fiber IDs that reacted
@@ -544,7 +937,8 @@ class StochasticChemistryEngine:
             approximation error for very high-propensity reactions. This is
             acceptable for typical fibrinolysis rates (k ~ 0.01-0.1 s⁻¹).
         """
-        propensities = self.compute_propensities(state)
+        if propensities is None:
+            propensities = self.compute_propensities(state)
 
         reacted_fibers = []
         for fid, a in propensities.items():
@@ -559,33 +953,37 @@ class StochasticChemistryEngine:
 
         return reacted_fibers
 
-    def advance(self, state: NetworkState, target_dt: float) -> Tuple[List[int], float]:
+    def advance(self, state: NetworkState, target_dt: float,
+                propensities: Optional[Dict[int, float]] = None) -> Tuple[List[int], float]:
         """
         Advance chemistry by target_dt using hybrid algorithm (strain-based).
 
         Args:
             state: Current state
             target_dt: Desired timestep [s]
+            propensities: Pre-computed propensities (avoids redundant computation)
 
         Returns:
             (list of cleaved fiber_ids, actual_dt)
         """
-        propensities = self.compute_propensities(state)
+        if propensities is None:
+            propensities = self.compute_propensities(state)
         a_total = sum(propensities.values())
 
         if a_total < self.tau_leap_threshold:
-            # Use SSA
-            fid, dt = self.gillespie_step(state, target_dt)
+            # Use SSA — pass pre-computed propensities
+            fid, dt = self.gillespie_step(state, target_dt, propensities)
             if fid is None:
                 return [], dt
             else:
                 return [fid], dt
         else:
-            # Use tau-leaping
-            reacted = self.tau_leap_step(state, target_dt)
+            # Use tau-leaping — pass pre-computed propensities
+            reacted = self.tau_leap_step(state, target_dt, propensities)
             return reacted, target_dt
 
-    def update_plasmin_locations(self, state: NetworkState):
+    def update_plasmin_locations(self, state: NetworkState,
+                                propensities: Optional[Dict[int, float]] = None):
         """
         Update plasmin visualization locations based on current propensities.
 
@@ -599,7 +997,8 @@ class StochasticChemistryEngine:
         - Zero propensity fibers (ruptured) → no plasmin
         - Location is random along fiber length (0.0 to 1.0)
         """
-        propensities = self.compute_propensities(state)
+        if propensities is None:
+            propensities = self.compute_propensities(state)
 
         # Clear old plasmin locations
         state.plasmin_locations.clear()
@@ -610,7 +1009,7 @@ class StochasticChemistryEngine:
             if prop > 0:
                 # Probability of showing plasmin visualization
                 # Use normalized propensity (cap at 1.0)
-                p_show = min(1.0, prop / 0.1)  # k_cat_0 = 0.1, so normalize
+                p_show = min(1.0, prop / 0.2)  # per-event rate ~0.2 at baseline
 
                 if self.rng.random() < p_show:
                     # Assign random location along fiber
@@ -624,7 +1023,7 @@ def check_left_right_connectivity(state: NetworkState) -> bool:
     Check if any path exists from left boundary nodes to right boundary nodes.
 
     Uses BFS (Breadth-First Search) to traverse the network graph through
-    active (non-ruptured) fibers only.
+    active (non-ruptured) fibers only. Uses cached adjacency when available.
 
     Args:
         state: Current network state
@@ -632,12 +1031,8 @@ def check_left_right_connectivity(state: NetworkState) -> bool:
     Returns:
         True if left and right poles are connected, False if cleared (disconnected)
     """
-    # Build adjacency list from active fibers (S > 0)
-    adjacency = defaultdict(set)
-    for fiber in state.fibers:
-        if fiber.S > 0:  # Only consider intact fibers
-            adjacency[fiber.node_i].add(fiber.node_j)
-            adjacency[fiber.node_j].add(fiber.node_i)  # Undirected graph
+    # Use cached adjacency (rebuilt only when invalidated)
+    adjacency = state.get_adjacency()
 
     # If no active fibers, network is cleared
     if not adjacency:
@@ -650,12 +1045,11 @@ def check_left_right_connectivity(state: NetworkState) -> bool:
 
     # Start BFS from ALL left boundary nodes
     # This handles cases where left nodes are in disconnected components
-    visited = set()
-    queue = list(state.left_boundary_nodes)
-    visited.update(state.left_boundary_nodes)
+    visited = set(state.left_boundary_nodes)
+    queue = deque(state.left_boundary_nodes)
 
     while queue:
-        current = queue.pop(0)
+        current = queue.popleft()
 
         # Check if we reached any right boundary node
         if current in state.right_boundary_nodes:
@@ -698,7 +1092,12 @@ class HybridMechanochemicalSimulation:
                  t_max: float = 100.0,
                  lysis_threshold: float = 0.9,
                  delta_S: float = 0.1,
-                 plasmin_concentration: float = 1.0):
+                 plasmin_concentration: float = 1.0,
+                 chemistry_mode: str = 'mean_field',
+                 abm_params=None,
+                 strain_cleavage_mode: str = 'inhibitory',
+                 gamma_biphasic: float = 1.15,
+                 eps_star: float = 0.22):
         """
         Initialize simulation with deterministic RNG.
 
@@ -710,37 +1109,57 @@ class HybridMechanochemicalSimulation:
             lysis_threshold: Stop when lysis_fraction > this
             delta_S: Integrity decrement per cleavage event
             plasmin_concentration: λ₀ scaling factor for cleavage rates.
-                k_eff(ε) = λ₀ × k₀ × exp(-β × ε)
+                k_eff(ε) = λ₀ × f(ε)
+            chemistry_mode: 'mean_field' (Gillespie SSA) or 'abm' (discrete agents)
+            abm_params: ABMParameters instance (required when chemistry_mode='abm')
+            strain_cleavage_mode: 'inhibitory', 'neutral', or 'biphasic'
+            gamma_biphasic: γ for biphasic mode recovery exponent
+            eps_star: ε* crossover strain for biphasic mode
 
         Note:
             All stochastic operations (SSA, tau-leap, plasmin) use NumPy Generator
             for deterministic replay. Same seed → identical trajectory.
         """
         self.state = initial_state
+        self.state.rebuild_fiber_index()
         self.rng_seed = rng_seed  # Store for reference
         self.dt_chem = dt_chem
         self.t_max = t_max
         self.lysis_threshold = lysis_threshold
         self.delta_S = delta_S
         self.plasmin_concentration = plasmin_concentration
+        self.chemistry_mode = chemistry_mode
+        self.strain_cleavage_mode = strain_cleavage_mode
 
-        self.chemistry = StochasticChemistryEngine(
-            rng_seed, plasmin_concentration=plasmin_concentration
-        )
+        # Initialize chemistry engine based on mode
+        self.chemistry = None
+        self.abm_engine = None
+
+        if chemistry_mode == 'abm' and abm_params is not None:
+            from src.core.plasmin_abm import PlasminABMEngine
+            self.abm_engine = PlasminABMEngine(abm_params, rng_seed)
+        else:
+            self.chemistry = StochasticChemistryEngine(
+                rng_seed, plasmin_concentration=plasmin_concentration,
+                delta_S=delta_S,
+                strain_cleavage_mode=strain_cleavage_mode,
+                gamma_biphasic=gamma_biphasic,
+                eps_star=eps_star,
+            )
 
         # History
         self.history = []
         self.termination_reason = None
 
     def relax_network(self):
-        """Relax network to mechanical equilibrium."""
+        """Relax network to mechanical equilibrium with partial constraints."""
         active_fibers = [f for f in self.state.fibers if f.S > 0]
 
         if not active_fibers:
             self.state.energy = 0.0
             return
 
-        # Filter fixed_nodes to only include nodes referenced by active fibers
+        # Filter constraints to only include nodes referenced by active fibers
         active_node_ids = set()
         for f in active_fibers:
             active_node_ids.add(f.node_i)
@@ -748,67 +1167,281 @@ class HybridMechanochemicalSimulation:
 
         active_fixed_nodes = {nid: pos for nid, pos in self.state.fixed_nodes.items()
                              if nid in active_node_ids}
+        active_partial_x = {nid: x for nid, x in self.state.partial_fixed_x.items()
+                           if nid in active_node_ids}
 
-        solver = EnergyMinimizationSolver(active_fibers, active_fixed_nodes)
+        solver = EnergyMinimizationSolver(active_fibers, active_fixed_nodes, active_partial_x)
         relaxed_pos, energy = solver.minimize(self.state.node_positions)
 
-        self.state.node_positions = relaxed_pos
+        # Merge relaxed positions into existing positions (preserve disconnected nodes)
+        for nid, pos in relaxed_pos.items():
+            self.state.node_positions[nid] = pos
         self.state.energy = energy
 
     def compute_forces(self) -> Dict[int, float]:
-        """Compute tensile force in each fiber."""
-        forces = {}
-        for fiber in self.state.fibers:
-            if fiber.S <= 0:
-                forces[fiber.fiber_id] = 0.0
-                continue
+        """Compute tensile force in each fiber (vectorized)."""
+        fibers = self.state.fibers
+        n = len(fibers)
+        if n == 0:
+            return {}
 
-            pos_i = self.state.node_positions[fiber.node_i]
-            pos_j = self.state.node_positions[fiber.node_j]
-            length = float(np.linalg.norm(pos_j - pos_i))
+        # Build arrays
+        fiber_ids = np.empty(n, dtype=int)
+        S_arr = np.empty(n)
+        L_c_arr = np.empty(n)
+        xi_arr = np.empty(n)
+        K0_arr = np.empty(n)
+        is_ewlc = np.empty(n, dtype=bool)
+        diameter_nm_arr = np.empty(n)
+        lengths = np.empty(n)
 
-            forces[fiber.fiber_id] = fiber.compute_force(length)
+        for i, f in enumerate(fibers):
+            fiber_ids[i] = f.fiber_id
+            S_arr[i] = f.S
+            L_c_arr[i] = f.L_c
+            xi_arr[i] = f.xi
+            K0_arr[i] = f.K0
+            is_ewlc[i] = (f.force_model == 'ewlc')
+            diameter_nm_arr[i] = f.diameter_nm
+            pos_i = self.state.node_positions[f.node_i]
+            pos_j = self.state.node_positions[f.node_j]
+            lengths[i] = np.linalg.norm(pos_j - pos_i)
 
-        return forces
+        raw_strain = (lengths - L_c_arr) / L_c_arr
 
-    def apply_cleavage(self, fiber_id: int):
+        if PC.THREE_REGIME_ENABLED:
+            strain = np.minimum(raw_strain, PC.RUPTURE_STRAIN)
+            hi = strain >= PC.MAX_STRAIN
+            lo = ~hi
+
+            F_eff = np.zeros_like(strain)
+
+            # Low-strain fibers: standard WLC with F_MAX cap
+            if np.any(lo):
+                s_lo = np.minimum(strain[lo], PC.MAX_STRAIN)
+                ome_lo = 1.0 - s_lo
+                kBT_xi_lo = PC.k_B_T / xi_arr[lo]
+                F_lo = kBT_xi_lo * (1.0 / (4.0 * ome_lo**2) - 0.25 + s_lo)
+                ewlc_lo = is_ewlc[lo]
+                if np.any(ewlc_lo):
+                    F_lo[ewlc_lo] += K0_arr[lo][ewlc_lo] * s_lo[ewlc_lo]
+                F_lo = np.where(S_arr[lo] > 0, S_arr[lo] * F_lo, 0.0)
+                F_eff[lo] = np.minimum(F_lo, PC.F_MAX)
+
+            # High-strain fibers: sigmoid blend (no F_MAX cap)
+            if np.any(hi):
+                s_hi = strain[hi]
+                w = 0.5 * (1.0 + np.tanh(
+                    (s_hi - PC.SIGMOID_EPSILON_MID) / PC.SIGMOID_DELTA_EPSILON))
+
+                eps_wlc = np.minimum(s_hi, 0.995)
+                one_minus = 1.0 - eps_wlc
+                kBT_xi_hi = PC.k_B_T / xi_arr[hi]
+                F_wlc = kBT_xi_hi * (1.0 / (4.0 * one_minus**2) - 0.25 + eps_wlc)
+                ewlc_hi = is_ewlc[hi]
+                if np.any(ewlc_hi):
+                    F_wlc[ewlc_hi] += K0_arr[hi][ewlc_hi] * eps_wlc[ewlc_hi]
+
+                d_m = diameter_nm_arr[hi] * 1e-9
+                A_cs = np.pi * (d_m / 2.0)**2
+                K_bb = PC.Y_A_STRONG * A_cs / L_c_arr[hi]
+                F_backbone = K_bb * s_hi
+
+                F_blend = (1.0 - w) * F_wlc + w * F_backbone
+                F_eff[hi] = np.where(S_arr[hi] > 0, S_arr[hi] * F_blend, 0.0)
+
+            # Zero out ruptured fibers
+            F_eff = np.where(raw_strain >= PC.RUPTURE_STRAIN, 0.0, F_eff)
+
+            return dict(zip(fiber_ids.tolist(), F_eff.tolist()))
+
+        # Original WLC-only path
+        strain = np.minimum(raw_strain, PC.MAX_STRAIN)
+        one_minus_eps = 1.0 - strain
+        kBT_xi = PC.k_B_T / xi_arr
+        F_wlc = kBT_xi * (1.0 / (4.0 * one_minus_eps**2) - 0.25 + strain)
+        F_model = F_wlc.copy()
+        if np.any(is_ewlc):
+            F_model[is_ewlc] += K0_arr[is_ewlc] * strain[is_ewlc]
+        F_eff = np.where(S_arr > 0, S_arr * F_model, 0.0)
+        F_eff = np.minimum(F_eff, PC.F_MAX)
+
+        return dict(zip(fiber_ids.tolist(), F_eff.tolist()))
+
+    def apply_cleavage(self, fiber_id: int, force_rupture: bool = False):
         """
-        Degrade fiber by delta_S and track degradation history.
+        Degrade fiber by delta_S (or force-rupture to S=0) and track degradation history.
 
         Records EVERY cleavage event (partial and complete) for research analysis.
         Each fiber needs 1/delta_S hits to fully rupture (e.g., 10 hits at delta_S=0.1).
+
+        Args:
+            fiber_id: ID of fiber to degrade
+            force_rupture: If True, set S=0 immediately (mechanical rupture)
         """
-        for i, fiber in enumerate(self.state.fibers):
-            if fiber.fiber_id == fiber_id:
-                # Calculate current length and strain before cleavage
+        i, fiber = self.state.get_fiber(fiber_id)
+        if fiber is None or fiber.S <= 0:
+            return
+
+        # Calculate current length and strain before cleavage
+        pos_i = self.state.node_positions[fiber.node_i]
+        pos_j = self.state.node_positions[fiber.node_j]
+        length = float(np.linalg.norm(pos_j - pos_i))
+        strain = (length - fiber.L_c) / fiber.L_c
+        tension = fiber.compute_force(length)
+
+        if force_rupture:
+            new_S = 0.0
+        else:
+            new_S = max(0.0, fiber.S - self.delta_S)
+        self.state.fibers[i] = replace(fiber, S=new_S)
+        self.state._fiber_index[fiber_id] = i  # Index unchanged, fiber replaced in-place
+
+        # Record every cleavage event (partial degradation tracking)
+        self.state.degradation_history.append({
+            'time': self.state.time,
+            'fiber_id': fiber_id,
+            'order': len(self.state.degradation_history) + 1,
+            'length': length,
+            'strain': strain,
+            'tension': tension,
+            'old_S': fiber.S,
+            'new_S': new_S,
+            'is_complete_rupture': new_S == 0.0,
+            'three_regime_rupture': force_rupture,
+            'node_i': fiber.node_i,
+            'node_j': fiber.node_j
+        })
+
+        # Track complete rupture count and update adjacency cache
+        if new_S == 0.0:
+            self.state.n_ruptured += 1
+            self.state.remove_fiber_from_adjacency(fiber)
+
+    def propagate_retraction_cascade(self, seed_fiber_ids: list) -> list:
+        """
+        Neighbor-aware post-cleavage retraction cascade.
+
+        When a prestrained fiber is cleaved, stored elastic energy snaps back
+        into the network. Only fibers sharing a node with a recently ruptured
+        fiber are checked: if their strain exceeds CASCADE_RUPTURE_THRESHOLD,
+        they rupture mechanically (S→0). The cascade propagates outward in
+        waves from the initial cleavage site.
+
+        Args:
+            seed_fiber_ids: fiber IDs ruptured this step (chemistry or prior wave)
+
+        Returns list of fiber IDs ruptured by the cascade.
+        """
+        if not PC.CASCADE_ENABLED or not seed_fiber_ids:
+            return []
+
+        threshold = PC.CASCADE_RUPTURE_THRESHOLD
+        all_cascade_ids = []
+        wave = 0
+
+        # Build node → active fiber mapping for neighbor lookup
+        node_to_fibers = defaultdict(list)
+        for fiber in self.state.fibers:
+            if fiber.S > 0:
+                node_to_fibers[fiber.node_i].append(fiber.fiber_id)
+                node_to_fibers[fiber.node_j].append(fiber.fiber_id)
+
+        # Collect the nodes touched by seed fibers
+        frontier_fids = set()
+        for fid in seed_fiber_ids:
+            _, fiber = self.state.get_fiber(fid)
+            if fiber is None:
+                continue
+            for neighbor_fid in node_to_fibers.get(fiber.node_i, []):
+                frontier_fids.add(neighbor_fid)
+            for neighbor_fid in node_to_fibers.get(fiber.node_j, []):
+                frontier_fids.add(neighbor_fid)
+        # Exclude already-ruptured seed fibers
+        frontier_fids -= set(seed_fiber_ids)
+
+        while frontier_fids:
+            wave_ids = []
+            for fid in frontier_fids:
+                idx, fiber = self.state.get_fiber(fid)
+                if fiber is None or fiber.S <= 0:
+                    continue
+                pos_i = self.state.node_positions[fiber.node_i]
+                pos_j = self.state.node_positions[fiber.node_j]
+                length = float(np.linalg.norm(pos_j - pos_i))
+                strain = (length - fiber.L_c) / fiber.L_c
+                if strain >= threshold:
+                    wave_ids.append(fid)
+
+            if not wave_ids:
+                break
+
+            wave += 1
+            next_frontier = set()
+            for fid in wave_ids:
+                idx, fiber = self.state.get_fiber(fid)
+                if fiber is None or fiber.S <= 0:
+                    continue
+
                 pos_i = self.state.node_positions[fiber.node_i]
                 pos_j = self.state.node_positions[fiber.node_j]
                 length = float(np.linalg.norm(pos_j - pos_i))
                 strain = (length - fiber.L_c) / fiber.L_c
                 tension = fiber.compute_force(length)
 
-                new_S = max(0.0, fiber.S - self.delta_S)
-                self.state.fibers[i] = replace(fiber, S=new_S)
+                self.state.fibers[idx] = replace(fiber, S=0.0)
+                self.state._fiber_index[fid] = idx
+                self.state.n_ruptured += 1
+                self.state.remove_fiber_from_adjacency(fiber)
 
-                # Record every cleavage event (partial degradation tracking)
+                # Update node→fiber map: remove ruptured fiber
+                for node in (fiber.node_i, fiber.node_j):
+                    if fid in node_to_fibers.get(node, []):
+                        node_to_fibers[node].remove(fid)
+                    # Collect neighbors for next wave
+                    for neighbor_fid in node_to_fibers.get(node, []):
+                        next_frontier.add(neighbor_fid)
+
                 self.state.degradation_history.append({
                     'time': self.state.time,
-                    'fiber_id': fiber_id,
+                    'fiber_id': fid,
                     'order': len(self.state.degradation_history) + 1,
                     'length': length,
                     'strain': strain,
                     'tension': tension,
                     'old_S': fiber.S,
-                    'new_S': new_S,
-                    'is_complete_rupture': new_S == 0.0,
+                    'new_S': 0.0,
+                    'is_complete_rupture': True,
+                    'cascade': True,
+                    'cascade_wave': wave,
                     'node_i': fiber.node_i,
-                    'node_j': fiber.node_j
+                    'node_j': fiber.node_j,
                 })
 
-                # Track complete rupture count
-                if new_S == 0.0:
-                    self.state.n_ruptured += 1
-                break
+            all_cascade_ids.extend(wave_ids)
+            # Relax after each wave — topology changed, strains redistribute
+            self.relax_network()
+            # Next wave: only neighbors of this wave's ruptures
+            frontier_fids = next_frontier - set(all_cascade_ids) - set(seed_fiber_ids)
+
+        return all_cascade_ids
+
+    def _check_three_regime_rupture(self) -> list:
+        """Check all active fibers for ε ≥ RUPTURE_STRAIN. Returns ruptured IDs."""
+        if not PC.THREE_REGIME_ENABLED:
+            return []
+        ruptured = []
+        for fiber in self.state.fibers:
+            if fiber.S <= 0:
+                continue
+            pos_i = self.state.node_positions[fiber.node_i]
+            pos_j = self.state.node_positions[fiber.node_j]
+            length = float(np.linalg.norm(pos_j - pos_i))
+            strain = (length - fiber.L_c) / fiber.L_c
+            if strain >= PC.RUPTURE_STRAIN:
+                self.apply_cleavage(fiber.fiber_id, force_rupture=True)
+                ruptured.append(fiber.fiber_id)
+        return ruptured
 
     def update_statistics(self):
         """Update lysis fraction."""
@@ -817,59 +1450,190 @@ class HybridMechanochemicalSimulation:
 
     def step(self) -> bool:
         """
-        Execute one simulation step.
+        Execute one simulation step. Dispatches to mean-field or ABM mode.
 
         Returns:
             True if simulation should continue, False if terminated
         """
-        # 1. Relax network
-        self.relax_network()
+        if self.chemistry_mode == 'abm' and self.abm_engine is not None:
+            return self._step_abm()
+        return self._step_mean_field()
 
-        # 2. Update plasmin visualization (show where enzymes are acting)
-        self.chemistry.update_plasmin_locations(self.state)
+    def _step_mean_field(self) -> bool:
+        """Mean-field Gillespie SSA step with continuous mechanical relaxation."""
+        # Compute propensities once, share with plasmin visualization and chemistry advance
+        propensities = self.chemistry.compute_propensities(self.state)
+        self.chemistry.update_plasmin_locations(self.state, propensities)
+        cleaved_fibers, dt_actual = self.chemistry.advance(self.state, self.dt_chem, propensities)
 
-        # 3. Advance chemistry (strain-based, no force calculation needed)
-        cleaved_fibers, dt_actual = self.chemistry.advance(self.state, self.dt_chem)
-
-        # 4. Apply cleavages
-        for fid in cleaved_fibers:
-            self.apply_cleavage(fid)
-
-        # 5. Check connectivity after cleavage (user requirement: check after EVERY fiber cleavage)
         if cleaved_fibers:
-            if not check_left_right_connectivity(self.state):
-                # Record the critical fiber (last fiber cleaved before clearance)
-                self.state.critical_fiber_id = cleaved_fibers[-1]
+            ruptured_this_step = []
+            for fid in cleaved_fibers:
+                _, fiber_info = self.state.get_fiber(fid)
+                old_S = fiber_info.S if fiber_info else "?"
+                self.apply_cleavage(fid)
+                _, new_fiber = self.state.get_fiber(fid)
+                new_S = new_fiber.S if new_fiber else "?"
+                is_rupture = " [RUPTURED]" if new_S == 0.0 else ""
+                if new_S == 0.0:
+                    ruptured_this_step.append(fid)
+                print(f"[Cleavage] Fiber #{fid}: S {old_S}->{new_S}{is_rupture} (t={self.state.time:.3f}s)")
+            # Relax once after all cleavages (network topology changed)
+            self.relax_network()
+            # Post-cleavage retraction cascade (seeded from fully ruptured fibers)
+            cascade_ids = self.propagate_retraction_cascade(ruptured_this_step)
+            if cascade_ids:
+                print(f"[Cascade] {len(cascade_ids)} fibers ruptured mechanically: {cascade_ids}")
+        # Skip relaxation when no cleavage — network is already at equilibrium
 
-                # Record detailed clearance event for research analysis
-                self.state.clearance_event = {
-                    'time': self.state.time,
-                    'critical_fiber_id': self.state.critical_fiber_id,
-                    'lysis_fraction': self.state.lysis_fraction,
-                    'remaining_fibers': len(self.state.fibers) - self.state.n_ruptured,
-                    'total_fibers': len(self.state.fibers),
-                    'cleaved_fibers': self.state.n_ruptured
-                }
+        # Three-regime mechanical rupture check
+        three_regime_ruptured = self._check_three_regime_rupture()
+        if three_regime_ruptured:
+            self.relax_network()
+            cascade_from_3r = self.propagate_retraction_cascade(three_regime_ruptured)
 
-                self.termination_reason = "network_cleared"
-                print(f"[Core V2] Network cleared at t={self.state.time:.2f}s (left-right poles disconnected)")
-                print(f"[Core V2] Critical fiber: {self.state.critical_fiber_id}")
-                print(f"[Core V2] Lysis at clearance: {self.state.lysis_fraction*100:.1f}%")
-                return False
-
-        # 6. Update time and statistics
+        # Advance time and statistics BEFORE connectivity check so clearance
+        # is recorded at the correct post-event time
         self.state.time += dt_actual
         self.update_statistics()
 
-        # 7. Record snapshot
+        if (cleaved_fibers or three_regime_ruptured) and not check_left_right_connectivity(self.state):
+            last_fid = three_regime_ruptured[-1] if three_regime_ruptured else cleaved_fibers[-1]
+            self._record_clearance(last_fid)
+            return False
+
         self.history.append({
             'time': self.state.time,
             'lysis_fraction': self.state.lysis_fraction,
             'n_cleaved': len(cleaved_fibers),
             'energy': self.state.energy
         })
+        return self._check_termination()
 
-        # 8. Check termination
+    def _step_abm(self) -> bool:
+        """ABM step: agent lifecycle, positional cleavages, mechanical relaxation."""
+        cleavage_events, dt_actual = self.abm_engine.advance(self.state, self.dt_chem)
+
+        if cleavage_events:
+            for event in cleavage_events:
+                self._apply_positional_cleavage(event)
+            # Relax once after all cleavages
+            self.relax_network()
+            active_fibers = [f for f in self.state.fibers if f.S > 0]
+            self.abm_engine.adjacency.rebuild(active_fibers)
+        # Skip relaxation when no cleavage — network is already at equilibrium
+
+        # Three-regime mechanical rupture check
+        three_regime_ruptured = self._check_three_regime_rupture()
+        if three_regime_ruptured:
+            self.relax_network()
+            cascade_from_3r = self.propagate_retraction_cascade(three_regime_ruptured)
+
+        self.state.time += dt_actual
+        self.update_statistics()
+
+        if (cleavage_events or three_regime_ruptured) and not check_left_right_connectivity(self.state):
+            last_fid = three_regime_ruptured[-1] if three_regime_ruptured else cleavage_events[-1]['fiber_id']
+            self._record_clearance(last_fid)
+            return False
+
+        self.history.append({
+            'time': self.state.time,
+            'lysis_fraction': self.state.lysis_fraction,
+            'n_cleaved': len(cleavage_events),
+            'energy': self.state.energy
+        })
+        return self._check_termination()
+
+    def _apply_positional_cleavage(self, event: dict) -> None:
+        """Split a fiber at the agent's position, creating two sub-fibers.
+
+        S-inheritance: child_S = parent.S - delta_S.
+        If child_S <= 0 the child is removed entirely (not added to graph).
+        """
+        from src.core.plasmin_abm import FiberSplitter
+
+        fiber_id = event['fiber_id']
+        position_s = event['position_s']
+
+        fiber_idx, fiber = self.state.get_fiber(fiber_id)
+        if fiber is None or fiber.S <= 0:
+            return
+
+        new_fid = self.state.abm_next_fiber_id
+        new_nid = self.state.abm_next_node_id
+        self.state.abm_next_fiber_id += 2
+        self.state.abm_next_node_id += 1
+
+        fiber_a, fiber_b, mid_node = FiberSplitter.split_fiber(
+            fiber, position_s, self.state, new_fid, new_nid,
+            delta_S=self.delta_S,
+        )
+
+        # Record degradation history before modifying fibers list
+        pos_i = self.state.node_positions[fiber.node_i]
+        pos_j = self.state.node_positions[fiber.node_j]
+        length = float(np.linalg.norm(pos_j - pos_i))
+        child_ids = []
+
+        if fiber_a is None and fiber_b is None:
+            # Parent fully degraded: child_S <= 0.
+            # Mark parent as ruptured (S=0) and leave in list.
+            self.state.fibers[fiber_idx] = replace(fiber, S=0.0)
+            self.state.n_ruptured += 1
+            # Release any agents still bound to this fiber
+            from src.core.plasmin_abm import AgentState
+            for agent in self.abm_engine.agents:
+                if agent.state == AgentState.BOUND and agent.bound_fiber_id == fiber_id:
+                    self.abm_engine._release_to_node(agent, self.state, fiber)
+        else:
+            # Replace parent with child_a, append child_b
+            self.state.fibers[fiber_idx] = fiber_a
+            child_ids.append(fiber_a.fiber_id)
+            self.state.fibers.append(fiber_b)
+            child_ids.append(fiber_b.fiber_id)
+
+            # Reassign bound agents to child fibers
+            self.abm_engine.reassign_agents_after_split(
+                fiber_id, position_s, fiber_a.fiber_id, fiber_b.fiber_id
+            )
+
+        self.state.rebuild_fiber_index()
+        self.state.invalidate_adjacency_cache()
+
+        self.state.degradation_history.append({
+            'time': self.state.time,
+            'fiber_id': fiber_id,
+            'order': len(self.state.degradation_history) + 1,
+            'length': length,
+            'strain': (length - fiber.L_c) / fiber.L_c,
+            'type': 'positional_split',
+            'position_s': position_s,
+            'child_fiber_ids': child_ids,
+            'new_node_id': mid_node,
+            'agent_id': event.get('agent_id'),
+            'child_S': max(0.0, fiber.S - self.delta_S),
+        })
+
+    def _record_clearance(self, critical_fiber_id: int) -> None:
+        """Record network clearance event."""
+        self.state.critical_fiber_id = critical_fiber_id
+        self.state.clearance_event = {
+            'time': self.state.time,
+            'critical_fiber_id': critical_fiber_id,
+            'lysis_fraction': self.state.lysis_fraction,
+            'remaining_fibers': len(self.state.fibers) - self.state.n_ruptured,
+            'total_fibers': len(self.state.fibers),
+            'cleaved_fibers': self.state.n_ruptured,
+        }
+        self.termination_reason = "network_cleared"
+        print(f"[Core V2] Network cleared at t={self.state.time:.2f}s "
+              f"(left-right poles disconnected)")
+        print(f"[Core V2] Critical fiber: {critical_fiber_id}")
+        print(f"[Core V2] Lysis at clearance: {self.state.lysis_fraction*100:.1f}%")
+
+    def _check_termination(self) -> bool:
+        """Check all termination conditions. Returns True if should continue."""
         if self.state.time >= self.t_max:
             self.termination_reason = "time_limit"
             return False

@@ -1,0 +1,60 @@
+==================================================================
+  ABM Repaired: Full Network Comparison Report
+  Generated: 2026-03-01 04:46:23
+==================================================================
+
+PARAMETER TABLE
+------------------------------------------------------------------
+  Parameter            Value          Units          Source
+------------------------------------------------------------------
+  k_on2                1e5            M^-1 s^-1      Longstaff 1993
+  k_off0               0.001          s^-1           Kd=10 nM
+  delta                0.5e-9         m              Bell 1978
+  C_plasmin            1e-09          M              lambda_0=1.0
+  k_on_eff             1e-04          s^-1           k_on2 x C
+  k_cat0               0.020          s^-1           Lynch 2022
+  beta_cat             0.84                          Varju 2011
+  Kd                   10             nM             k_off/k_on2
+  p_stay               0.5                           Bannish 2014
+  N_agents             4              count          C x V x N_A
+------------------------------------------------------------------
+
+MEAN-FIELD RESULTS
+------------------------------------------------------------------
+  Seed   Time       Lysis      Ruptured   Status           Wall
+  ------------------------------------------------------------
+  0      29.3       0.436      218        CLEARED          107.7s
+  1      31.8       0.462      231        CLEARED          107.0s
+  2      28.2       0.416      208        CLEARED          119.7s
+
+ABM RESULTS
+------------------------------------------------------------------
+  Seed   Agents   Splits   Binds    1st Bind   Status           Wall
+  ------------------------------------------------------------
+  0      4        0        0        NONE       time_limit       0.1s
+  1      4        1        2        510.0s     time_limit       1.4s
+  2      4        0        0        NONE       time_limit       0.1s
+
+PER-AGENT STATISTICS (all seeds combined)
+------------------------------------------------------------------
+  Total agents:        12
+  Mean cleavages:      0.08
+  Median cleavages:    0.0
+  Max cleavages:       1
+  Agents w/ 0 cleav:   11 (92%)
+  Mean bindings:       0.17
+  Agents w/ 0 binds:   10 (83%)
+
+COMPARISON: ABM vs MEAN-FIELD
+------------------------------------------------------------------
+  MF clearance time:   29.8 +/- 1.5 s (3/3 cleared)
+  ABM clearance time:  NONE cleared in 600.0s
+  MF total ruptures:   219 +/- 9
+  ABM total splits:    0.3 +/- 0.5
+
+  NOTE: ABM with lambda_0=1.0 (1 nM) produces few agents
+  (4 computed from C*V*N_A).
+  Binding rate per agent per fiber = k_on2 * C = 1e-04 s^-1.
+  With ~4.5 fibers/node, each agent binds roughly every 2222 s.
+
+==================================================================
